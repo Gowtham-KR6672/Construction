@@ -1,21 +1,44 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
+import Lottie from "lottie-react";
 import {
   CheckCircle2,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   ClipboardCheck,
   Clock,
+  Building2,
+  CalendarDays,
+  EyeOff,
+  FileSpreadsheet,
   HardHat,
   IndianRupee,
+  Lock,
   LogOut,
+  Mail,
+  MapPin,
+  LayoutGrid,
   Download,
   Plus,
+  RefreshCw,
   ShieldCheck,
+  UserPlus,
   Users,
   XCircle
 } from "lucide-react";
+import constructionLoadingAnimation from "./assets/construction-loading.json";
 import "./styles.css";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+const DEFAULT_TEAM_NAMES = [
+  "Mason team",
+  "Centering team",
+  "Tiles team",
+  "Painting team",
+  "Electrical team",
+  "Plumbing team"
+];
 
 function money(value) {
   return new Intl.NumberFormat("en-IN", {
@@ -79,6 +102,46 @@ function teamPayrollTotal(team) {
   return team.members.reduce((total, member) => total + memberTotal(member), 0);
 }
 
+function splitTeamName(name = "") {
+  const [mainTeam, ...subTeamParts] = name.split(" - ");
+  return {
+    mainTeam: mainTeam.trim(),
+    subTeam: subTeamParts.join(" - ").trim()
+  };
+}
+
+function mainTeamSelectionId(mainTeam) {
+  return `main:${mainTeam}`;
+}
+
+function isMainTeamSelection(value) {
+  return value.startsWith("main:");
+}
+
+function selectedMainTeam(value) {
+  return value.replace(/^main:/, "");
+}
+
+function buildTeamGroups(teams) {
+  const groups = new Map();
+
+  teams.forEach((team) => {
+    const { mainTeam, subTeam } = splitTeamName(team.name);
+    if (!groups.has(mainTeam)) {
+      groups.set(mainTeam, { mainTeam, parent: null, subTeams: [] });
+    }
+
+    const group = groups.get(mainTeam);
+    if (subTeam) {
+      group.subTeams.push({ ...team, subTeam });
+    } else {
+      group.parent = team;
+    }
+  });
+
+  return Array.from(groups.values()).sort((a, b) => a.mainTeam.localeCompare(b.mainTeam));
+}
+
 function dateKey(date) {
   return date.toISOString().slice(0, 10);
 }
@@ -105,22 +168,6 @@ function datesBetween(start, end) {
   }
 
   return dates;
-}
-
-function currentPeriodDates(period) {
-  const today = new Date();
-
-  if (period === "weekly") return weekDates();
-
-  if (period === "monthly") {
-    const start = new Date(today.getFullYear(), today.getMonth(), 1);
-    const end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-    return datesBetween(start, end);
-  }
-
-  const start = new Date(today.getFullYear(), 0, 1);
-  const end = new Date(today.getFullYear(), 11, 31);
-  return datesBetween(start, end);
 }
 
 function csvValue(value) {
@@ -168,14 +215,19 @@ function apiRequest(path, options = {}) {
 function App() {
   const [user, setUser] = useState(null);
   const [error, setError] = useState("");
+  const [isCheckingSession, setIsCheckingSession] = useState(Boolean(localStorage.getItem("token")));
 
   useEffect(() => {
     const token = localStorage.getItem("token");
-    if (!token) return;
+    if (!token) {
+      setIsCheckingSession(false);
+      return;
+    }
 
     apiRequest("/auth/me")
       .then((data) => setUser(data.user))
-      .catch(() => localStorage.removeItem("token"));
+      .catch(() => localStorage.removeItem("token"))
+      .finally(() => setIsCheckingSession(false));
   }, []);
 
   function logout() {
@@ -183,17 +235,99 @@ function App() {
     setUser(null);
   }
 
+  if (isCheckingSession) {
+    return <LoadingScreen title="Restoring secure session" detail="Connecting to the deployed API and database" />;
+  }
+
   if (!user) return <Login setUser={setUser} error={error} setError={setError} />;
 
   return <Dashboard user={user} logout={logout} />;
 }
 
+function LoadingScreen({ title, detail }) {
+  return (
+    <main className="loading-page">
+      <div className="loading-panel">
+        <Lottie
+          animationData={constructionLoadingAnimation}
+          aria-hidden="true"
+          className="loading-lottie"
+          loop
+        />
+        <div>
+          <h1>{title}</h1>
+          <p>{detail}</p>
+        </div>
+        <div className="loading-bar" aria-hidden="true">
+          <span />
+        </div>
+      </div>
+    </main>
+  );
+}
+
+function DataLoading({ title = "Fetching database records", detail = "Loading teams, approvals, users, attendance, and payroll data." }) {
+  return (
+    <section className="panel data-loading" aria-live="polite">
+      <div className="loading-mark compact" aria-hidden="true">
+        <HardHat size={24} />
+      </div>
+      <div>
+        <h2>{title}</h2>
+        <p className="muted">{detail}</p>
+      </div>
+      <div className="loading-card-grid" aria-hidden="true">
+        <span />
+        <span />
+        <span />
+      </div>
+    </section>
+  );
+}
+
+function PanelHeading({ icon: Icon, title, action }) {
+  return (
+    <div className="panel-heading">
+      <div>
+        <span className="panel-heading-icon">
+          <Icon size={18} />
+        </span>
+        <h2>{title}</h2>
+      </div>
+      {action}
+    </div>
+  );
+}
+
+function IconField({ icon: Icon, children }) {
+  return (
+    <div className="icon-field">
+      <Icon size={16} />
+      {children}
+    </div>
+  );
+}
+
+function EmptyState({ icon: Icon, title, detail }) {
+  return (
+    <div className="empty-state">
+      <span>
+        <Icon size={28} />
+      </span>
+      <strong>{title}</strong>
+      <p>{detail}</p>
+    </div>
+  );
+}
+
 function Login({ setUser, error, setError }) {
   const [form, setForm] = useState({ email: "", password: "" });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function submit(event) {
     event.preventDefault();
     setError("");
+    setIsSubmitting(true);
 
     try {
       const data = await apiRequest("/auth/login", {
@@ -204,6 +338,8 @@ function Login({ setUser, error, setError }) {
       setUser(data.user);
     } catch (err) {
       setError(err.message);
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -242,13 +378,10 @@ function Login({ setUser, error, setError }) {
             />
           </label>
           {error && <p className="error">{error}</p>}
-          <button className="primary-button" type="submit">Login</button>
-        </form>
-        <div className="demo-list">
-          <button type="button" onClick={() => setForm({ email: "super@valarconstruction.com", password: "Valar@123" })}>
-            Super Admin
+          <button className="primary-button" type="submit" disabled={isSubmitting}>
+            {isSubmitting ? "Fetching data..." : "Login"}
           </button>
-        </div>
+        </form>
       </section>
     </main>
   );
@@ -260,38 +393,75 @@ function Dashboard({ user, logout }) {
   const [approvals, setApprovals] = useState([]);
   const [message, setMessage] = useState("");
   const [selectedSiteId, setSelectedSiteId] = useState("");
+  const [expandedTeamNames, setExpandedTeamNames] = useState({});
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const canManageUsers = user.role === "super_admin" || user.permissions?.includes("manage_users");
   const canViewApprovals = user.role === "super_admin" || user.permissions?.includes("view_approvals");
 
-  async function loadData() {
-    const [teamData, approvalData, userData] = await Promise.all([
-      apiRequest("/teams"),
-      canViewApprovals ? apiRequest("/approvals") : Promise.resolve([]),
-      canManageUsers ? apiRequest("/users") : Promise.resolve([])
-    ]);
-    setTeams(teamData);
-    setApprovals(approvalData);
-    setUsers(userData);
+  async function loadData({ background = false } = {}) {
+    if (background) {
+      setIsRefreshing(true);
+    } else {
+      setIsInitialLoading(true);
+    }
+
+    try {
+      const [teamData, approvalData, userData] = await Promise.all([
+        apiRequest("/teams"),
+        canViewApprovals ? apiRequest("/approvals") : Promise.resolve([]),
+        canManageUsers ? apiRequest("/users") : Promise.resolve([])
+      ]);
+      setTeams(teamData);
+      setApprovals(approvalData);
+      setUsers(userData);
+    } finally {
+      if (background) {
+        setIsRefreshing(false);
+      } else {
+        setIsInitialLoading(false);
+      }
+    }
   }
 
   useEffect(() => {
     loadData().catch((err) => setMessage(err.message));
   }, []);
 
-  const visibleTeams = selectedSiteId ? teams.filter((team) => team._id === selectedSiteId) : teams;
+  const refreshData = () => loadData({ background: true });
+  const teamGroups = useMemo(() => buildTeamGroups(teams), [teams]);
+  const selectedTeamIds = useMemo(() => {
+    if (!selectedSiteId) return teams.map((team) => team._id);
+    if (!isMainTeamSelection(selectedSiteId)) return [selectedSiteId];
+
+    const mainTeam = selectedMainTeam(selectedSiteId);
+    return teams
+      .filter((team) => splitTeamName(team.name).mainTeam === mainTeam)
+      .map((team) => team._id);
+  }, [selectedSiteId, teams]);
+  const visibleTeams = selectedSiteId ? teams.filter((team) => selectedTeamIds.includes(team._id)) : teams;
   const visibleUsers = selectedSiteId
-    ? users.filter((item) => (item.assignedTeam?._id || item.assignedTeam) === selectedSiteId)
+    ? users.filter((item) => selectedTeamIds.includes(item.assignedTeam?._id || item.assignedTeam))
     : users;
   const visibleApprovals = selectedSiteId
-    ? approvals.filter((item) => (item.team?._id || item.team) === selectedSiteId)
+    ? approvals.filter((item) => selectedTeamIds.includes(item.team?._id || item.team))
     : approvals;
-  const selectedSite = teams.find((team) => team._id === selectedSiteId);
+  const selectedSite = isMainTeamSelection(selectedSiteId)
+    ? { name: selectedMainTeam(selectedSiteId), siteLocation: `${visibleTeams.length} team${visibleTeams.length === 1 ? "" : "s"}` }
+    : teams.find((team) => team._id === selectedSiteId);
+
+  function toggleTeamGroup(mainTeam) {
+    setExpandedTeamNames((current) => ({
+      ...current,
+      [mainTeam]: !current[mainTeam]
+    }));
+  }
 
   const stats = useMemo(() => {
     const memberCount = visibleTeams.reduce((total, team) => total + team.members.length, 0);
     const payrollTotal = visibleTeams.reduce((total, team) => total + teamPayrollTotal(team), 0);
     return [
-      { label: "Teams", value: visibleTeams.length, icon: Users },
+      { label: "Teams", value: buildTeamGroups(visibleTeams).length, icon: Users },
       { label: "Members", value: memberCount, icon: HardHat },
       { label: "Payroll total", value: money(payrollTotal), icon: IndianRupee },
       { label: "Pending approvals", value: visibleApprovals.filter((item) => item.status === "pending").length, icon: ClipboardCheck }
@@ -301,14 +471,24 @@ function Dashboard({ user, logout }) {
   return (
     <main className="app-shell">
       <aside className="sidebar">
-        <div className="brand-mark small">
-          <HardHat />
-          <span>BuildCo</span>
+        <div className="sidebar-brand">
+          <div className="brand-mark small">
+            <HardHat size={28} />
+            <span>BuildCo</span>
+          </div>
+          <button className="sidebar-collapse" type="button" aria-label="Collapse navigation">
+            <ChevronLeft size={22} />
+          </button>
         </div>
         <div className="role-card">
-          <ShieldCheck />
-          <strong>{user.name}</strong>
-          <span>{user.role.replace("_", " ")}</span>
+          <span className="role-icon">
+            <ShieldCheck size={24} />
+          </span>
+          <div>
+            <strong>{user.name}</strong>
+            <span>{user.role.replace("_", " ")}</span>
+          </div>
+          <ChevronDown size={18} />
         </div>
         <div className="sidebar-sites">
           <strong>Sites</strong>
@@ -317,21 +497,62 @@ function Dashboard({ user, logout }) {
             type="button"
             onClick={() => setSelectedSiteId("")}
           >
-            <span>All Sites</span>
-            <small>Show all dashboard data</small>
+            <LayoutGrid className="sidebar-site-icon" size={24} />
+            <span>
+              <strong>All Sites</strong>
+              <small>Show all dashboard data</small>
+            </span>
+            <ChevronRight className="sidebar-site-arrow" size={20} />
           </button>
-          {teams.map((team) => (
-            <button
-              className={`sidebar-site ${selectedSiteId === team._id ? "active" : ""}`}
-              key={team._id}
-              type="button"
-              onClick={() => setSelectedSiteId(team._id)}
-            >
-              <span>{team.name}</span>
-              <small>{team.siteLocation}</small>
-            </button>
-          ))}
-          {!teams.length && <small>No sites created yet.</small>}
+          {teamGroups.map((group) => {
+            const groupSelectionId = mainTeamSelectionId(group.mainTeam);
+            const groupLocation = group.parent?.siteLocation || group.subTeams[0]?.siteLocation || "";
+            const hasSubTeams = group.subTeams.length > 0;
+            const isExpanded = Boolean(expandedTeamNames[group.mainTeam]);
+            return (
+              <div className="sidebar-team-group" key={group.mainTeam}>
+                <button
+                  className={`sidebar-site ${selectedSiteId === groupSelectionId ? "active" : ""}`}
+                  type="button"
+                  onClick={() => {
+                    setSelectedSiteId(groupSelectionId);
+                    if (hasSubTeams) toggleTeamGroup(group.mainTeam);
+                  }}
+                >
+                  <Building2 className="sidebar-site-icon" size={24} />
+                  <span>
+                    <strong>{group.mainTeam}</strong>
+                    <small>{groupLocation}</small>
+                  </span>
+                  {hasSubTeams ? (
+                    <ChevronRight className={`sidebar-site-arrow ${isExpanded ? "expanded" : ""}`} size={20} />
+                  ) : (
+                    <ChevronRight className="sidebar-site-arrow" size={20} />
+                  )}
+                </button>
+                {hasSubTeams && isExpanded && (
+                  <div className="sidebar-subteams">
+                    {group.subTeams.map((team) => (
+                      <button
+                        className={`sidebar-subteam ${selectedSiteId === team._id ? "active" : ""}`}
+                        key={team._id}
+                        type="button"
+                        onClick={() => setSelectedSiteId(team._id)}
+                      >
+                        <span>
+                          <strong>{team.subTeam}</strong>
+                          <small>{team.siteLocation}</small>
+                        </span>
+                        {selectedSiteId === team._id && <ChevronRight size={16} />}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+          {isInitialLoading && <small>Loading sites...</small>}
+          {!isInitialLoading && !teams.length && <small>No sites created yet.</small>}
         </div>
         <button className="ghost-button" onClick={logout}>
           <LogOut size={18} />
@@ -348,24 +569,43 @@ function Dashboard({ user, logout }) {
         </header>
 
         <div className="stat-grid">
-          {stats.map((stat) => (
-            <article className="stat-card" key={stat.label}>
-              <stat.icon />
-              <span>{stat.label}</span>
-              <strong>{stat.value}</strong>
-            </article>
-          ))}
+          {isInitialLoading
+            ? ["Teams", "Members", "Payroll total", "Pending approvals"].map((label) => (
+              <article className="stat-card stat-card-loading" key={label}>
+                <span>{label}</span>
+                <strong />
+              </article>
+            ))
+            : stats.map((stat) => (
+              <article className="stat-card" key={stat.label}>
+                <span className="stat-icon">
+                  <stat.icon size={28} />
+                </span>
+                <div>
+                  <span>{stat.label}</span>
+                  <strong>{stat.value}</strong>
+                </div>
+              </article>
+            ))}
         </div>
 
         {message && <p className="notice">{message}</p>}
 
-        {user.role === "super_admin" && (
-          <SuperAdminPanel users={visibleUsers} teams={visibleTeams} approvals={visibleApprovals} reload={loadData} setMessage={setMessage} />
+        {isRefreshing && <p className="sync-note">Refreshing database data...</p>}
+
+        {isInitialLoading ? (
+          <DataLoading />
+        ) : (
+          <>
+            {user.role === "super_admin" && (
+              <SuperAdminPanel users={visibleUsers} teams={visibleTeams} approvals={visibleApprovals} reload={refreshData} setMessage={setMessage} />
+            )}
+
+            {user.role === "super_admin" && <ReportsPanel teams={visibleTeams} />}
+
+            <TeamPanel user={user} teams={visibleTeams} reload={refreshData} setMessage={setMessage} />
+          </>
         )}
-
-        {user.role === "super_admin" && <ReportsPanel teams={visibleTeams} />}
-
-        <TeamPanel user={user} teams={visibleTeams} reload={loadData} setMessage={setMessage} />
       </section>
     </main>
   );
@@ -378,7 +618,8 @@ function SuperAdminPanel({ users, teams, approvals, reload, setMessage }) {
     password: "",
     assignedTeam: ""
   });
-  const [newTeam, setNewTeam] = useState({ name: "", siteLocation: "" });
+  const [newTeam, setNewTeam] = useState({ name: "", subTeam: "", siteLocation: "" });
+  const [teamNameMode, setTeamNameMode] = useState("");
   const [passwordForms, setPasswordForms] = useState({});
   const [editingAdminId, setEditingAdminId] = useState(null);
   const [adminEditForm, setAdminEditForm] = useState({ name: "", email: "", assignedTeam: "" });
@@ -430,13 +671,20 @@ function SuperAdminPanel({ users, teams, approvals, reload, setMessage }) {
 
   async function createTeam(event) {
     event.preventDefault();
+    const teamName = teamNameMode === "custom"
+      ? newTeam.name.trim()
+      : [teamNameMode, newTeam.subTeam.trim()].filter(Boolean).join(" - ");
 
     const createdTeam = await apiRequest("/teams", {
       method: "POST",
-      body: JSON.stringify(newTeam)
+      body: JSON.stringify({
+        name: teamName,
+        siteLocation: newTeam.siteLocation
+      })
     });
 
-    setNewTeam({ name: "", siteLocation: "" });
+    setNewTeam({ name: "", subTeam: "", siteLocation: "" });
+    setTeamNameMode("");
     setSelectedTeamId(createdTeam._id);
     setMessage("Team created successfully");
     reload();
@@ -529,81 +777,132 @@ function SuperAdminPanel({ users, teams, approvals, reload, setMessage }) {
   return (
     <section className="panel-grid">
       <article className="panel user-form-panel">
-        <h2>Create Admin Login</h2>
+        <PanelHeading icon={UserPlus} title="Create Admin Login" />
         <form className="user-create-form" onSubmit={createLogin}>
-          <input
-            placeholder="Full name"
-            value={newUser.name}
-            onChange={(event) => setNewUser({ ...newUser, name: event.target.value })}
-            required
-          />
-          <input
-            placeholder="Email"
-            type="email"
-            value={newUser.email}
-            onChange={(event) => setNewUser({ ...newUser, email: event.target.value })}
-            required
-          />
-          <input
-            placeholder="Password"
-            type="password"
-            minLength="6"
-            value={newUser.password}
-            onChange={(event) => setNewUser({ ...newUser, password: event.target.value })}
-            required
-          />
-          <select
-            value={newUser.assignedTeam}
-            onChange={(event) => setNewUser({ ...newUser, assignedTeam: event.target.value })}
-            required
-          >
-            <option value="">Assign site</option>
-            {teams.map((team) => (
-              <option key={team._id} value={team._id}>{team.name} - {team.siteLocation}</option>
-            ))}
-          </select>
+          <IconField icon={UserPlus}>
+            <input
+              placeholder="Full name"
+              value={newUser.name}
+              onChange={(event) => setNewUser({ ...newUser, name: event.target.value })}
+              required
+            />
+          </IconField>
+          <IconField icon={Mail}>
+            <input
+              placeholder="Email"
+              type="email"
+              value={newUser.email}
+              onChange={(event) => setNewUser({ ...newUser, email: event.target.value })}
+              required
+            />
+          </IconField>
+          <IconField icon={Lock}>
+            <input
+              placeholder="Password"
+              type="password"
+              minLength="6"
+              value={newUser.password}
+              onChange={(event) => setNewUser({ ...newUser, password: event.target.value })}
+              required
+            />
+            <EyeOff size={16} />
+          </IconField>
+          <IconField icon={Building2}>
+            <select
+              value={newUser.assignedTeam}
+              onChange={(event) => setNewUser({ ...newUser, assignedTeam: event.target.value })}
+              required
+            >
+              <option value="">Assign site</option>
+              {teams.map((team) => (
+                <option key={team._id} value={team._id}>{team.name} - {team.siteLocation}</option>
+              ))}
+            </select>
+          </IconField>
           <button className="primary-button" type="submit">
             <Plus size={18} />
-            Create admin
+            Create Admin
           </button>
         </form>
       </article>
 
       <article className="panel user-form-panel">
-        <h2>Create Team</h2>
+        <PanelHeading icon={Users} title="Create Team" />
         <form className="user-create-form" onSubmit={createTeam}>
-          <input
-            placeholder="Team name"
-            value={newTeam.name}
-            onChange={(event) => setNewTeam({ ...newTeam, name: event.target.value })}
-            required
-          />
-          <input
-            placeholder="Site location"
-            value={newTeam.siteLocation}
-            onChange={(event) => setNewTeam({ ...newTeam, siteLocation: event.target.value })}
-            required
-          />
+          <IconField icon={Users}>
+            <select
+              value={teamNameMode}
+              onChange={(event) => {
+                setTeamNameMode(event.target.value);
+                setNewTeam({
+                  ...newTeam,
+                  name: "",
+                  subTeam: ""
+                });
+              }}
+              required
+            >
+              <option value="">Select team type</option>
+              {DEFAULT_TEAM_NAMES.map((teamName) => (
+                <option key={teamName} value={teamName}>{teamName}</option>
+              ))}
+              <option value="custom">Custom team</option>
+            </select>
+          </IconField>
+          {teamNameMode === "custom" && (
+            <IconField icon={Building2}>
+              <input
+                placeholder="Custom team name"
+                value={newTeam.name}
+                onChange={(event) => setNewTeam({ ...newTeam, name: event.target.value })}
+                required
+              />
+            </IconField>
+          )}
+          {teamNameMode && teamNameMode !== "custom" && (
+            <IconField icon={Building2}>
+              <input
+                placeholder="Sub-team name"
+                value={newTeam.subTeam}
+                onChange={(event) => setNewTeam({ ...newTeam, subTeam: event.target.value })}
+              />
+            </IconField>
+          )}
+          <IconField icon={MapPin}>
+            <input
+              placeholder="Site location"
+              value={newTeam.siteLocation}
+              onChange={(event) => setNewTeam({ ...newTeam, siteLocation: event.target.value })}
+              required
+            />
+          </IconField>
           <button className="primary-button" type="submit">
             <Plus size={18} />
-            Create team
+            Create Team
           </button>
         </form>
 
         <div className="created-team-list">
-          <h3>Created Teams</h3>
-          <select
-            value={selectedTeamId}
-            onChange={(event) => {
-              setSelectedTeamId(event.target.value);
-              setEditingTeamId(null);
-            }}
-          >
-            <option value="">Select team</option>
-            {teams.map((team) => (
-              <option key={team._id} value={team._id}>{team.name} - {team.siteLocation}</option>
-            ))}
-          </select>
+          <div className="section-subheading">
+            <h3>Created Teams</h3>
+            <button type="button" onClick={reload} aria-label="Refresh teams">
+              <RefreshCw size={16} />
+            </button>
+          </div>
+          <IconField icon={Building2}>
+            <select
+              value={selectedTeamId}
+              onChange={(event) => {
+                setSelectedTeamId(event.target.value);
+                setEditingTeamId(null);
+              }}
+            >
+              <option value="">Select team</option>
+              {teams.map((team) => (
+                <option key={team._id} value={team._id}>{team.name} - {team.siteLocation}</option>
+              ))}
+            </select>
+          </IconField>
 
           {selectedTeam && (
             <div className="selected-team-card">
@@ -635,8 +934,18 @@ function SuperAdminPanel({ users, teams, approvals, reload, setMessage }) {
         </div>
       </article>
 
-      <article className="panel">
-        <h2>Admin Users</h2>
+      <article className="panel table-panel">
+        <PanelHeading
+          icon={UserPlus}
+          title="Admin Users"
+          action={<button className="panel-link" type="button">View all</button>}
+        />
+        <div className="mini-table-head admin-table-head">
+          <span>Name</span>
+          <span>Email</span>
+          <span>Site</span>
+          <span>Created On</span>
+        </div>
         <div className="user-password-list">
           {users.filter((item) => item.role !== "super_admin").map((item) => (
             <div className="password-row" key={item._id}>
@@ -677,12 +986,28 @@ function SuperAdminPanel({ users, teams, approvals, reload, setMessage }) {
               )}
             </div>
           ))}
-          {!users.filter((item) => item.role !== "super_admin").length && <p className="muted">No Admin logins created yet.</p>}
+          {!users.filter((item) => item.role !== "super_admin").length && (
+            <EmptyState
+              icon={Users}
+              title="No admin logins created yet."
+              detail="Create your first admin login using the form above."
+            />
+          )}
         </div>
       </article>
 
-      <article className="panel">
-        <h2>Approval Requests</h2>
+      <article className="panel table-panel">
+        <PanelHeading
+          icon={ClipboardCheck}
+          title="Approval Requests"
+          action={<button className="panel-link" type="button">View all</button>}
+        />
+        <div className="mini-table-head approval-table-head">
+          <span>Request</span>
+          <span>Requested By</span>
+          <span>Team</span>
+          <span>Date</span>
+        </div>
         <div className="request-list">
           {approvals.map((request) => (
             <div className="request-card" key={request._id}>
@@ -701,7 +1026,13 @@ function SuperAdminPanel({ users, teams, approvals, reload, setMessage }) {
               )}
             </div>
           ))}
-          {!approvals.length && <p className="muted">No pending approval requests.</p>}
+          {!approvals.length && (
+            <EmptyState
+              icon={ClipboardCheck}
+              title="No pending approval requests."
+              detail="You're all caught up!"
+            />
+          )}
         </div>
       </article>
     </section>
@@ -709,6 +1040,10 @@ function SuperAdminPanel({ users, teams, approvals, reload, setMessage }) {
 }
 
 function ReportsPanel({ teams }) {
+  const today = dateKey(new Date());
+  const [dateRange, setDateRange] = useState({ from: today, to: today });
+  const [reportError, setReportError] = useState("");
+
   function overtimeHoursForDates(member, dates) {
     return (member.overtimeEntries || [])
       .filter((entry) => dates.includes(entry.date))
@@ -729,11 +1064,28 @@ function ReportsPanel({ teams }) {
     }).join("; ");
   }
 
-  function downloadReport(period) {
-    const dates = currentPeriodDates(period);
+  function downloadReport(event) {
+    event.preventDefault();
+    setReportError("");
+
+    if (!dateRange.from || !dateRange.to) {
+      setReportError("Select both From and To dates");
+      return;
+    }
+
+    const start = new Date(`${dateRange.from}T00:00:00`);
+    const end = new Date(`${dateRange.to}T00:00:00`);
+
+    if (start > end) {
+      setReportError("From date must be before To date");
+      return;
+    }
+
+    const dates = datesBetween(start, end);
+    const periodLabel = `${dateRange.from} to ${dateRange.to}`;
     const rows = [
       [
-        "Period",
+        "Date range",
         "Team",
         "Site",
         "Member",
@@ -752,7 +1104,7 @@ function ReportsPanel({ teams }) {
     teams.forEach((team) => {
       team.members.forEach((member) => {
         rows.push([
-          period,
+          periodLabel,
           team.name,
           team.siteLocation,
           member.name,
@@ -769,29 +1121,48 @@ function ReportsPanel({ teams }) {
       });
     });
 
-    downloadCsv(`construction-${period}-report-${dateKey(new Date())}.csv`, rows);
+    downloadCsv(`construction-${dateRange.from}-to-${dateRange.to}-report-${dateKey(new Date())}.csv`, rows);
   }
 
   return (
     <section className="panel report-panel">
-      <div>
-        <h2>Download Reports</h2>
-        <p className="muted">Export attendance, salary, overtime, remarks, and totals.</p>
+      <div className="report-heading">
+        <PanelHeading icon={FileSpreadsheet} title="Download Reports" />
+        <p className="muted">Export attendance, salary, overtime, remarks, and totals by date range.</p>
       </div>
-      <div className="report-actions">
-        <button type="button" onClick={() => downloadReport("weekly")}>
-          <Download size={18} />
-          Weekly
-        </button>
-        <button type="button" onClick={() => downloadReport("monthly")}>
-          <Download size={18} />
-          Monthly
-        </button>
-        <button type="button" onClick={() => downloadReport("yearly")}>
-          <Download size={18} />
-          Yearly
-        </button>
+      <div className="report-illustration" aria-hidden="true">
+        <FileSpreadsheet size={54} />
+        <Download size={18} />
       </div>
+      <form className="report-actions" onSubmit={downloadReport}>
+        <label>
+          From
+          <IconField icon={CalendarDays}>
+            <input
+              type="date"
+              value={dateRange.from}
+              onChange={(event) => setDateRange({ ...dateRange, from: event.target.value })}
+              required
+            />
+          </IconField>
+        </label>
+        <label>
+          To
+          <IconField icon={CalendarDays}>
+            <input
+              type="date"
+              value={dateRange.to}
+              onChange={(event) => setDateRange({ ...dateRange, to: event.target.value })}
+              required
+            />
+          </IconField>
+        </label>
+        <button className="primary-button" type="submit">
+          <Download size={18} />
+          Download Report
+        </button>
+        {reportError && <p className="error">{reportError}</p>}
+      </form>
     </section>
   );
 }
