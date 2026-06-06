@@ -10,9 +10,7 @@ import { httpError } from "../utils/httpError.js";
 
 const router = express.Router();
 
-function userOwnsAssignedTeam(user, teamId) {
-  return user.assignedTeam && String(user.assignedTeam) === String(teamId);
-}
+const MASON_TEAM_NAME = "Mason team";
 
 function splitTeamName(name = "") {
   const [mainTeam, ...subTeamParts] = name.split(" - ");
@@ -24,6 +22,20 @@ function splitTeamName(name = "") {
 
 function escapeRegex(value = "") {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+async function userCanManageTeam(user, teamId) {
+  if (!user.assignedTeam) return false;
+  if (String(user.assignedTeam) === String(teamId)) return true;
+
+  const [assignedTeam, requestedTeam] = await Promise.all([
+    Team.findById(user.assignedTeam).select("name"),
+    Team.findById(teamId).select("name")
+  ]);
+
+  if (!assignedTeam || !requestedTeam) return false;
+
+  return splitTeamName(assignedTeam.name).mainTeam === splitTeamName(requestedTeam.name).mainTeam;
 }
 
 function cleanMemberPayload(payload = {}) {
@@ -108,6 +120,10 @@ router.post("/", requireAuth, async (req, res, next) => {
       const assignedMainTeam = splitTeamName(assignedTeam.name).mainTeam;
       const requestedTeam = splitTeamName(req.body.name);
 
+      if (assignedMainTeam !== MASON_TEAM_NAME) {
+        throw httpError(403, "Admins can create sub teams only for Mason team");
+      }
+
       if (!requestedTeam.subTeam) {
         throw httpError(400, "Admins can create sub teams only");
       }
@@ -169,7 +185,7 @@ router.post("/:teamId/members/request", requireAuth, async (req, res, next) => {
       throw httpError(403, "Only assigned admins submit approval requests from this route");
     }
 
-    if (!userOwnsAssignedTeam(req.user, req.params.teamId)) {
+    if (!(await userCanManageTeam(req.user, req.params.teamId))) {
       throw httpError(403, "Admins can only manage assigned site");
     }
 
@@ -231,7 +247,7 @@ router.post("/:teamId/members/:memberId/overtime", requireAuth, async (req, res,
       throw httpError(403, "Only assigned admins can add overtime");
     }
 
-    if (!userOwnsAssignedTeam(req.user, req.params.teamId)) {
+    if (!(await userCanManageTeam(req.user, req.params.teamId))) {
       throw httpError(403, "Admins can only add overtime for assigned site");
     }
 
@@ -290,7 +306,7 @@ router.put("/:teamId/members/:memberId/attendance", requireAuth, async (req, res
       throw httpError(403, "Only assigned admins can update attendance");
     }
 
-    if (!userOwnsAssignedTeam(req.user, req.params.teamId)) {
+    if (!(await userCanManageTeam(req.user, req.params.teamId))) {
       throw httpError(403, "Admins can only update attendance for assigned site");
     }
 

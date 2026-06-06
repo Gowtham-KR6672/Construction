@@ -62,7 +62,7 @@ app.use((err, _req, res, _next) => {
 const isServerless = Boolean(process.env.VERCEL);
 
 if (!isServerless) {
-  const port = process.env.PORT || 5000;
+  const port = process.env.PORT || 5001;
   connectDatabase()
     .then(() => {
       app.listen(port, () => {

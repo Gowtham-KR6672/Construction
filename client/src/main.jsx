@@ -32,7 +32,7 @@ import constructionLoadingAnimation from "./assets/construction-loading.json";
 import logoAsset from "./assets/logo-display.png";
 import "./styles.css";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5001/api";
 const DEFAULT_TEAM_NAMES = [
   "Mason team",
   "Centering team",
@@ -41,6 +41,7 @@ const DEFAULT_TEAM_NAMES = [
   "Electrical team",
   "Plumbing team"
 ];
+const MASON_TEAM_NAME = "Mason team";
 
 function isIosDevice() {
   if (typeof window === "undefined") return false;
@@ -520,6 +521,14 @@ function Dashboard({ user, logout }) {
 
   const refreshData = () => loadData({ background: true });
   const teamGroups = useMemo(() => buildTeamGroups(teams), [teams]);
+
+  useEffect(() => {
+    if (user.role === "admin" && !selectedSiteId && teamGroups.length > 0) {
+      const mainTeam = teamGroups[0].mainTeam;
+      setSelectedSiteId(mainTeamSelectionId(mainTeam));
+      setExpandedTeamNames((current) => ({ ...current, [mainTeam]: true }));
+    }
+  }, [user.role, selectedSiteId, teamGroups]);
   const selectedTeamIds = useMemo(() => {
     if (!selectedSiteId) return teams.map((team) => team._id);
     if (!isMainTeamSelection(selectedSiteId)) return [selectedSiteId];
@@ -582,18 +591,20 @@ function Dashboard({ user, logout }) {
         </div>
         <div className="sidebar-sites">
           <strong>Sites</strong>
-          <button
-            className={`sidebar-site ${!selectedSiteId ? "active" : ""}`}
-            type="button"
-            onClick={() => setSelectedSiteId("")}
-          >
-            <LayoutGrid className="sidebar-site-icon" size={24} />
-            <span>
-              <strong>All Sites</strong>
-              <small>Show all dashboard data</small>
-            </span>
-            <ChevronRight className="sidebar-site-arrow" size={20} />
-          </button>
+          {user.role === "super_admin" && (
+            <button
+              className={`sidebar-site ${!selectedSiteId ? "active" : ""}`}
+              type="button"
+              onClick={() => setSelectedSiteId("")}
+            >
+              <LayoutGrid className="sidebar-site-icon" size={24} />
+              <span>
+                <strong>All Sites</strong>
+                <small>Show all dashboard data</small>
+              </span>
+              <ChevronRight className="sidebar-site-arrow" size={20} />
+            </button>
+          )}
           {teamGroups.map((group) => {
             const groupSelectionId = mainTeamSelectionId(group.mainTeam);
             const groupLocation = group.parent?.siteLocation || group.subTeams[0]?.siteLocation || "";
@@ -694,10 +705,6 @@ function Dashboard({ user, logout }) {
 
             {user.role === "super_admin" && <ReportsPanel teams={visibleTeams} />}
 
-            {user.role === "admin" && (
-              <AdminSubTeamPanel user={user} teams={visibleTeams} reload={refreshData} setMessage={setMessage} />
-            )}
-
             <TeamPanel user={user} teams={visibleTeams} reload={refreshData} setMessage={setMessage} />
           </>
         )}
@@ -713,7 +720,7 @@ function SuperAdminPanel({ users, teams, approvals, reload, setMessage }) {
     password: "",
     assignedTeam: ""
   });
-  const [newTeam, setNewTeam] = useState({ name: "", subTeam: "", siteLocation: "" });
+  const [newTeam, setNewTeam] = useState({ name: "", siteLocation: "" });
   const [teamNameMode, setTeamNameMode] = useState("");
   const [passwordForms, setPasswordForms] = useState({});
   const [editingAdminId, setEditingAdminId] = useState(null);
@@ -768,7 +775,7 @@ function SuperAdminPanel({ users, teams, approvals, reload, setMessage }) {
     event.preventDefault();
     const teamName = teamNameMode === "custom"
       ? newTeam.name.trim()
-      : [teamNameMode, newTeam.subTeam.trim()].filter(Boolean).join(" - ");
+      : teamNameMode;
 
     const createdTeam = await apiRequest("/teams", {
       method: "POST",
@@ -778,7 +785,7 @@ function SuperAdminPanel({ users, teams, approvals, reload, setMessage }) {
       })
     });
 
-    setNewTeam({ name: "", subTeam: "", siteLocation: "" });
+    setNewTeam({ name: "", siteLocation: "" });
     setTeamNameMode("");
     setSelectedTeamId(createdTeam._id);
     setMessage("Team created successfully");
@@ -931,8 +938,7 @@ function SuperAdminPanel({ users, teams, approvals, reload, setMessage }) {
                 setTeamNameMode(event.target.value);
                 setNewTeam({
                   ...newTeam,
-                  name: "",
-                  subTeam: ""
+                  name: ""
                 });
               }}
               required
@@ -951,15 +957,6 @@ function SuperAdminPanel({ users, teams, approvals, reload, setMessage }) {
                 value={newTeam.name}
                 onChange={(event) => setNewTeam({ ...newTeam, name: event.target.value })}
                 required
-              />
-            </IconField>
-          )}
-          {teamNameMode && teamNameMode !== "custom" && (
-            <IconField icon={Building2}>
-              <input
-                placeholder="Sub-team name"
-                value={newTeam.subTeam}
-                onChange={(event) => setNewTeam({ ...newTeam, subTeam: event.target.value })}
               />
             </IconField>
           )}
@@ -1284,79 +1281,10 @@ function ReportsPanel({ teams }) {
   );
 }
 
-function AdminSubTeamPanel({ user, teams, reload, setMessage }) {
-  const assignedTeamId = user.assignedTeam?._id || user.assignedTeam;
-  const assignedTeam = teams.find((team) => team._id === assignedTeamId) || teams[0];
-  const mainTeam = assignedTeam ? splitTeamName(assignedTeam.name).mainTeam : "";
-  const [subTeamForm, setSubTeamForm] = useState({ subTeam: "", siteLocation: "" });
-
-  useEffect(() => {
-    if (assignedTeam && !subTeamForm.siteLocation) {
-      setSubTeamForm((current) => ({ ...current, siteLocation: assignedTeam.siteLocation || "" }));
-    }
-  }, [assignedTeam?._id]);
-
-  async function createSubTeam(event) {
-    event.preventDefault();
-    const subTeamName = subTeamForm.subTeam.trim();
-
-    if (!assignedTeam || !mainTeam) {
-      setMessage("Assigned team not found for this admin");
-      return;
-    }
-
-    if (!subTeamName) {
-      setMessage("Enter a sub-team name");
-      return;
-    }
-
-    await apiRequest("/teams", {
-      method: "POST",
-      body: JSON.stringify({
-        name: `${mainTeam} - ${subTeamName}`,
-        siteLocation: subTeamForm.siteLocation || assignedTeam.siteLocation
-      })
-    });
-
-    setSubTeamForm({ subTeam: "", siteLocation: assignedTeam.siteLocation || "" });
-    setMessage("Sub team created successfully");
-    reload();
-  }
-
-  return (
-    <section className="panel admin-subteam-panel">
-      <PanelHeading icon={Building2} title="Create Sub Team" />
-      <form className="user-create-form admin-subteam-form" onSubmit={createSubTeam}>
-        <IconField icon={Users}>
-          <input value={mainTeam} aria-label="Main team" readOnly />
-        </IconField>
-        <IconField icon={Building2}>
-          <input
-            placeholder="Sub-team name"
-            value={subTeamForm.subTeam}
-            onChange={(event) => setSubTeamForm({ ...subTeamForm, subTeam: event.target.value })}
-            required
-          />
-        </IconField>
-        <IconField icon={MapPin}>
-          <input
-            placeholder="Site location"
-            value={subTeamForm.siteLocation}
-            onChange={(event) => setSubTeamForm({ ...subTeamForm, siteLocation: event.target.value })}
-            required
-          />
-        </IconField>
-        <button className="primary-button" type="submit">
-          <Plus size={18} />
-          Create Sub Team
-        </button>
-      </form>
-    </section>
-  );
-}
-
 function TeamPanel({ user, teams, reload, setMessage }) {
   const [memberForm, setMemberForm] = useState({ name: "", trade: "", phone: "", site: "" });
+  const [selectedMemberTeamId, setSelectedMemberTeamId] = useState("");
+  const [subTeamForm, setSubTeamForm] = useState({ subTeam: "", siteLocation: "" });
   const [salaryForms, setSalaryForms] = useState({});
   const [dailyOvertimeForms, setDailyOvertimeForms] = useState({});
   const currentWeek = useMemo(() => weekDates(), []);
@@ -1365,8 +1293,23 @@ function TeamPanel({ user, teams, reload, setMessage }) {
   const assignedTeam = user.role === "admin"
     ? teams.find((team) => team._id === assignedTeamId) || teams[0]
     : teams[0];
-  const canAssignedAdminRequest = user.role === "admin" && assignedTeam;
-  const assignedSiteLocation = assignedTeam?.siteLocation || "";
+  const canAssignedAdminRequest = Boolean(user.role === "admin" && assignedTeam);
+  const selectedMemberTeam = teams.find((team) => team._id === selectedMemberTeamId) || assignedTeam;
+  const selectedMemberSiteLocation = selectedMemberTeam?.siteLocation || "";
+  const selectedMainTeam = splitTeamName(selectedMemberTeam?.name).mainTeam;
+  const canCreateMasonSubTeam = canAssignedAdminRequest && selectedMainTeam === MASON_TEAM_NAME;
+
+  useEffect(() => {
+    if (canAssignedAdminRequest && !selectedMemberTeamId && assignedTeam?._id) {
+      setSelectedMemberTeamId(assignedTeam._id);
+    }
+  }, [assignedTeam?._id, canAssignedAdminRequest, selectedMemberTeamId]);
+
+  useEffect(() => {
+    if (selectedMemberTeam) {
+      setSubTeamForm((current) => ({ ...current, siteLocation: current.siteLocation || selectedMemberTeam.siteLocation || "" }));
+    }
+  }, [selectedMemberTeam?._id]);
 
   function salaryFormFor(member) {
     return salaryForms[member._id] || {
@@ -1404,18 +1347,45 @@ function TeamPanel({ user, teams, reload, setMessage }) {
 
   async function submitMember(event) {
     event.preventDefault();
-    if (!canAssignedAdminRequest) return;
+    if (!canAssignedAdminRequest || !selectedMemberTeam) return;
 
-    await apiRequest(`/teams/${assignedTeam._id}/members/request`, {
+    await apiRequest(`/teams/${selectedMemberTeam._id}/members/request`, {
       method: "POST",
       body: JSON.stringify({
         type: "add_member",
-        payload: { ...memberForm, site: assignedSiteLocation }
+        payload: { ...memberForm, site: selectedMemberSiteLocation }
       })
     });
 
     setMemberForm({ name: "", trade: "", phone: "", site: "" });
     setMessage("Team member change sent to Super Admin for approval");
+    reload();
+  }
+
+  async function createMasonSubTeam() {
+    const subTeamName = subTeamForm.subTeam.trim();
+
+    if (!canCreateMasonSubTeam || !selectedMemberTeam) {
+      setMessage("Sub teams can be added only for Mason team");
+      return;
+    }
+
+    if (!subTeamName) {
+      setMessage("Enter a sub-team name");
+      return;
+    }
+
+    const createdTeam = await apiRequest("/teams", {
+      method: "POST",
+      body: JSON.stringify({
+        name: `${MASON_TEAM_NAME} - ${subTeamName}`,
+        siteLocation: subTeamForm.siteLocation || selectedMemberTeam.siteLocation
+      })
+    });
+
+    setSelectedMemberTeamId(createdTeam._id);
+    setSubTeamForm({ subTeam: "", siteLocation: createdTeam.siteLocation || "" });
+    setMessage("Mason sub team created successfully");
     reload();
   }
 
@@ -1481,10 +1451,34 @@ function TeamPanel({ user, teams, reload, setMessage }) {
       {canAssignedAdminRequest && (
         <form className="panel member-form" onSubmit={submitMember}>
           <h2>Add Team Member</h2>
+          <select value={selectedMemberTeamId} onChange={(e) => setSelectedMemberTeamId(e.target.value)} required>
+            <option value="">Select team</option>
+            {teams.map((team) => (
+              <option key={team._id} value={team._id}>{team.name} - {team.siteLocation}</option>
+            ))}
+          </select>
+          {canCreateMasonSubTeam && (
+            <div className="member-subteam-row">
+              <input
+                placeholder="Mason sub-team name"
+                value={subTeamForm.subTeam}
+                onChange={(e) => setSubTeamForm({ ...subTeamForm, subTeam: e.target.value })}
+              />
+              <input
+                placeholder="Site location"
+                value={subTeamForm.siteLocation}
+                onChange={(e) => setSubTeamForm({ ...subTeamForm, siteLocation: e.target.value })}
+              />
+              <button className="secondary-button" type="button" onClick={createMasonSubTeam}>
+                <Plus size={18} />
+                Add Sub Team
+              </button>
+            </div>
+          )}
           <input placeholder="Name" value={memberForm.name} onChange={(e) => setMemberForm({ ...memberForm, name: e.target.value })} required />
           <input placeholder="Trade" value={memberForm.trade} onChange={(e) => setMemberForm({ ...memberForm, trade: e.target.value })} required />
           <input placeholder="Phone" value={memberForm.phone} onChange={(e) => setMemberForm({ ...memberForm, phone: e.target.value })} />
-          <input placeholder="Assigned site" value={assignedSiteLocation} readOnly />
+          <input placeholder="Assigned site" value={selectedMemberSiteLocation} readOnly />
           <button className="primary-button" type="submit"><Plus size={18} /> Send for approval</button>
         </form>
       )}

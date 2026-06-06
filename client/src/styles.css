@@ -171,6 +171,7 @@ button:disabled {
 }
 
 .primary-button,
+.secondary-button,
 .ghost-button,
 .action-row button {
   align-items: center;
@@ -186,6 +187,12 @@ button:disabled {
 .primary-button {
   background: #d39023;
   color: #1d160b;
+  font-weight: 800;
+}
+
+.secondary-button {
+  background: #efe7d9;
+  color: #30291f;
   font-weight: 800;
 }
 
@@ -810,6 +817,12 @@ button:disabled {
   gap: 12px;
 }
 
+.member-subteam-row {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(180px, 1fr) minmax(180px, 1fr) minmax(160px, auto);
+}
+
 .team-header {
   align-items: center;
   display: flex;
@@ -1213,15 +1226,6 @@ body {
 
 .user-create-form {
   gap: 12px;
-}
-
-.admin-subteam-panel {
-  grid-column: 1 / -1;
-}
-
-.admin-subteam-form {
-  display: grid;
-  grid-template-columns: minmax(180px, 1fr) minmax(180px, 1fr) minmax(180px, 1fr) minmax(180px, auto);
 }
 
 .icon-field {
@@ -1716,8 +1720,7 @@ body {
   }
 
   .report-actions,
-  .panel-grid,
-  .admin-subteam-form {
+  .panel-grid {
     grid-template-columns: 1fr;
   }
 
@@ -1730,6 +1733,7 @@ body {
   .salary-controls,
   .overtime-form,
   .today-ot-form,
+  .member-subteam-row,
   .team-total,
   .password-row,
   .selected-team-card,
