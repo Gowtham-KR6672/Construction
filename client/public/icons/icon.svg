@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title>BuildCo Workforce</title>
+  <rect width="512" height="512" rx="96" fill="#1d2521"/>
+  <path fill="#d39023" d="M120 306h272v84H120z"/>
+  <path fill="#f5c343" d="M150 246c0-58 47-105 105-105h2c58 0 105 47 105 105v24H150z"/>
+  <path fill="#111820" d="M196 174h44v96h-44zm76 0h44v96h-44z"/>
+  <path fill="#fff8e8" d="M116 270h280c18 0 32 14 32 32v4H84v-4c0-18 14-32 32-32z"/>
+  <path fill="#fff8e8" d="M160 340h192v26H160z"/>
+</svg>

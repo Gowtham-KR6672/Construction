@@ -23,11 +23,13 @@ import {
   Plus,
   RefreshCw,
   ShieldCheck,
+  Smartphone,
   UserPlus,
   Users,
   XCircle
 } from "lucide-react";
 import constructionLoadingAnimation from "./assets/construction-loading.json";
+import logoAsset from "./assets/logo-display.png";
 import "./styles.css";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
@@ -39,6 +41,30 @@ const DEFAULT_TEAM_NAMES = [
   "Electrical team",
   "Plumbing team"
 ];
+
+function isIosDevice() {
+  if (typeof window === "undefined") return false;
+
+  const userAgent = window.navigator.userAgent.toLowerCase();
+  const isTouchMac = window.navigator.platform === "MacIntel" && window.navigator.maxTouchPoints > 1;
+  return /iphone|ipad|ipod/.test(userAgent) || isTouchMac;
+}
+
+function isStandaloneApp() {
+  if (typeof window === "undefined") return false;
+
+  return window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+}
+
+function registerServiceWorker() {
+  if (!("serviceWorker" in navigator)) return;
+
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch((error) => {
+      console.warn("Service worker registration failed", error);
+    });
+  });
+}
 
 function money(value) {
   return new Intl.NumberFormat("en-IN", {
@@ -244,6 +270,69 @@ function App() {
   return <Dashboard user={user} logout={logout} />;
 }
 
+function InstallAppPrompt({ compact = false, edge = false }) {
+  const [installPrompt, setInstallPrompt] = useState(null);
+  const [isInstalled, setIsInstalled] = useState(isStandaloneApp);
+  const [showIosHelp, setShowIosHelp] = useState(false);
+
+  useEffect(() => {
+    function handleBeforeInstallPrompt(event) {
+      event.preventDefault();
+      setInstallPrompt(event);
+    }
+
+    function handleInstalled() {
+      setInstallPrompt(null);
+      setShowIosHelp(false);
+      setIsInstalled(true);
+    }
+
+    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+    window.addEventListener("appinstalled", handleInstalled);
+
+    if (isIosDevice() && !isStandaloneApp()) {
+      setShowIosHelp(true);
+    }
+
+    return () => {
+      window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+      window.removeEventListener("appinstalled", handleInstalled);
+    };
+  }, []);
+
+  async function installApp() {
+    if (!installPrompt) return;
+
+    installPrompt.prompt();
+    const choice = await installPrompt.userChoice;
+    if (choice.outcome === "accepted") {
+      setInstallPrompt(null);
+    }
+  }
+
+  if (isInstalled) return null;
+  if (!installPrompt && !showIosHelp) return null;
+
+  return (
+    <div className={`install-app ${compact ? "compact" : ""} ${edge ? "edge" : ""}`}>
+      <button
+        className="install-button"
+        type="button"
+        onClick={installPrompt ? installApp : undefined}
+        disabled={!installPrompt}
+        aria-label={installPrompt ? "Install app" : "Add to Home Screen"}
+        title={installPrompt ? "Install App" : "Add to Home Screen"}
+      >
+        <Smartphone size={18} />
+        <span>{installPrompt ? "Install App" : "Add to Home Screen"}</span>
+      </button>
+      {showIosHelp && (
+        <p>On iPhone or iPad, tap Share in Safari, then choose Add to Home Screen.</p>
+      )}
+    </div>
+  );
+}
+
 function LoadingScreen({ title, detail }) {
   return (
     <main className="loading-page">
@@ -345,9 +434,10 @@ function Login({ setUser, error, setError }) {
 
   return (
     <main className="login-page">
+      <InstallAppPrompt edge />
       <section className="login-hero">
         <div className="brand-mark">
-          <HardHat size={34} />
+          <img src={logoAsset} alt="" className="brand-logo" />
           <span>BuildCo Workforce</span>
         </div>
         <h1>Construction admin login and site approvals</h1>
@@ -473,7 +563,7 @@ function Dashboard({ user, logout }) {
       <aside className="sidebar">
         <div className="sidebar-brand">
           <div className="brand-mark small">
-            <HardHat size={28} />
+            <img src={logoAsset} alt="" className="brand-logo" />
             <span>BuildCo</span>
           </div>
           <button className="sidebar-collapse" type="button" aria-label="Collapse navigation">
@@ -566,6 +656,7 @@ function Dashboard({ user, logout }) {
             <h1>{user.role === "super_admin" ? "Super Admin Control" : "Assigned Site"}</h1>
             <p>{selectedSite ? `${selectedSite.name}: ${selectedSite.siteLocation}` : roleDescription(user)}</p>
           </div>
+          <InstallAppPrompt compact />
         </header>
 
         <div className="stat-grid">
@@ -602,6 +693,10 @@ function Dashboard({ user, logout }) {
             )}
 
             {user.role === "super_admin" && <ReportsPanel teams={visibleTeams} />}
+
+            {user.role === "admin" && (
+              <AdminSubTeamPanel user={user} teams={visibleTeams} reload={refreshData} setMessage={setMessage} />
+            )}
 
             <TeamPanel user={user} teams={visibleTeams} reload={refreshData} setMessage={setMessage} />
           </>
@@ -1042,7 +1137,12 @@ function SuperAdminPanel({ users, teams, approvals, reload, setMessage }) {
 function ReportsPanel({ teams }) {
   const today = dateKey(new Date());
   const [dateRange, setDateRange] = useState({ from: today, to: today });
+  const [selectedReportTeamId, setSelectedReportTeamId] = useState("");
   const [reportError, setReportError] = useState("");
+  const reportTeams = selectedReportTeamId
+    ? teams.filter((team) => team._id === selectedReportTeamId)
+    : teams;
+  const selectedReportTeam = teams.find((team) => team._id === selectedReportTeamId);
 
   function overtimeHoursForDates(member, dates) {
     return (member.overtimeEntries || [])
@@ -1101,7 +1201,7 @@ function ReportsPanel({ teams }) {
       ]
     ];
 
-    teams.forEach((team) => {
+    reportTeams.forEach((team) => {
       team.members.forEach((member) => {
         rows.push([
           periodLabel,
@@ -1121,7 +1221,8 @@ function ReportsPanel({ teams }) {
       });
     });
 
-    downloadCsv(`construction-${dateRange.from}-to-${dateRange.to}-report-${dateKey(new Date())}.csv`, rows);
+    const teamLabel = selectedReportTeam ? selectedReportTeam.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") : "all-teams";
+    downloadCsv(`construction-${teamLabel}-${dateRange.from}-to-${dateRange.to}-report-${dateKey(new Date())}.csv`, rows);
   }
 
   return (
@@ -1135,6 +1236,22 @@ function ReportsPanel({ teams }) {
         <Download size={18} />
       </div>
       <form className="report-actions" onSubmit={downloadReport}>
+        <label>
+          Team
+          <IconField icon={Building2}>
+            <select
+              value={selectedReportTeamId}
+              onChange={(event) => setSelectedReportTeamId(event.target.value)}
+            >
+              <option value="">All teams</option>
+              {teams.map((team) => (
+                <option value={team._id} key={team._id}>
+                  {team.name}
+                </option>
+              ))}
+            </select>
+          </IconField>
+        </label>
         <label>
           From
           <IconField icon={CalendarDays}>
@@ -1167,13 +1284,87 @@ function ReportsPanel({ teams }) {
   );
 }
 
+function AdminSubTeamPanel({ user, teams, reload, setMessage }) {
+  const assignedTeamId = user.assignedTeam?._id || user.assignedTeam;
+  const assignedTeam = teams.find((team) => team._id === assignedTeamId) || teams[0];
+  const mainTeam = assignedTeam ? splitTeamName(assignedTeam.name).mainTeam : "";
+  const [subTeamForm, setSubTeamForm] = useState({ subTeam: "", siteLocation: "" });
+
+  useEffect(() => {
+    if (assignedTeam && !subTeamForm.siteLocation) {
+      setSubTeamForm((current) => ({ ...current, siteLocation: assignedTeam.siteLocation || "" }));
+    }
+  }, [assignedTeam?._id]);
+
+  async function createSubTeam(event) {
+    event.preventDefault();
+    const subTeamName = subTeamForm.subTeam.trim();
+
+    if (!assignedTeam || !mainTeam) {
+      setMessage("Assigned team not found for this admin");
+      return;
+    }
+
+    if (!subTeamName) {
+      setMessage("Enter a sub-team name");
+      return;
+    }
+
+    await apiRequest("/teams", {
+      method: "POST",
+      body: JSON.stringify({
+        name: `${mainTeam} - ${subTeamName}`,
+        siteLocation: subTeamForm.siteLocation || assignedTeam.siteLocation
+      })
+    });
+
+    setSubTeamForm({ subTeam: "", siteLocation: assignedTeam.siteLocation || "" });
+    setMessage("Sub team created successfully");
+    reload();
+  }
+
+  return (
+    <section className="panel admin-subteam-panel">
+      <PanelHeading icon={Building2} title="Create Sub Team" />
+      <form className="user-create-form admin-subteam-form" onSubmit={createSubTeam}>
+        <IconField icon={Users}>
+          <input value={mainTeam} aria-label="Main team" readOnly />
+        </IconField>
+        <IconField icon={Building2}>
+          <input
+            placeholder="Sub-team name"
+            value={subTeamForm.subTeam}
+            onChange={(event) => setSubTeamForm({ ...subTeamForm, subTeam: event.target.value })}
+            required
+          />
+        </IconField>
+        <IconField icon={MapPin}>
+          <input
+            placeholder="Site location"
+            value={subTeamForm.siteLocation}
+            onChange={(event) => setSubTeamForm({ ...subTeamForm, siteLocation: event.target.value })}
+            required
+          />
+        </IconField>
+        <button className="primary-button" type="submit">
+          <Plus size={18} />
+          Create Sub Team
+        </button>
+      </form>
+    </section>
+  );
+}
+
 function TeamPanel({ user, teams, reload, setMessage }) {
   const [memberForm, setMemberForm] = useState({ name: "", trade: "", phone: "", site: "" });
   const [salaryForms, setSalaryForms] = useState({});
   const [dailyOvertimeForms, setDailyOvertimeForms] = useState({});
   const currentWeek = useMemo(() => weekDates(), []);
   const todayKey = dateKey(new Date());
-  const assignedTeam = teams[0];
+  const assignedTeamId = user.assignedTeam?._id || user.assignedTeam;
+  const assignedTeam = user.role === "admin"
+    ? teams.find((team) => team._id === assignedTeamId) || teams[0]
+    : teams[0];
   const canAssignedAdminRequest = user.role === "admin" && assignedTeam;
   const assignedSiteLocation = assignedTeam?.siteLocation || "";
 
@@ -1475,5 +1666,7 @@ function roleDescription(user) {
   if (user.role === "super_admin") return "Full system control for sites, admins, salary, reports, and approvals.";
   return "You can work only with your assigned site. Changes are sent for Super Admin approval.";
 }
+
+registerServiceWorker();
 
 createRoot(document.getElementById("root")).render(<App />);

@@ -14,6 +14,18 @@ function userOwnsAssignedTeam(user, teamId) {
   return user.assignedTeam && String(user.assignedTeam) === String(teamId);
 }
 
+function splitTeamName(name = "") {
+  const [mainTeam, ...subTeamParts] = name.split(" - ");
+  return {
+    mainTeam: mainTeam.trim(),
+    subTeam: subTeamParts.join(" - ").trim()
+  };
+}
+
+function escapeRegex(value = "") {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 function cleanMemberPayload(payload = {}) {
   const allowed = ["name", "trade", "phone", "site", "status"];
   return Object.fromEntries(Object.entries(payload).filter(([key]) => allowed.includes(key)));
@@ -61,13 +73,61 @@ async function attachMembers(teams) {
 }
 
 router.get("/", requireAuth, async (req, res) => {
-  const query = req.user.role === "admin" ? { _id: req.user.assignedTeam } : {};
+  let query = {};
+
+  if (req.user.role === "admin") {
+    if (!req.user.assignedTeam) {
+      return res.json([]);
+    }
+
+    const assignedTeam = await Team.findById(req.user.assignedTeam);
+    if (!assignedTeam) {
+      return res.json([]);
+    }
+
+    const { mainTeam } = splitTeamName(assignedTeam.name);
+    query = { name: new RegExp(`^${escapeRegex(mainTeam)}(?: - |$)`) };
+  }
+
   const teams = await Team.find(query).populate("supervisor", "name email role");
   res.json(await attachMembers(teams));
 });
 
-router.post("/", requireAuth, requirePermission("manage_teams"), async (req, res, next) => {
+router.post("/", requireAuth, async (req, res, next) => {
   try {
+    if (req.user.role === "admin" && !req.user.permissions.includes("manage_teams")) {
+      if (!req.user.assignedTeam) {
+        throw httpError(403, "Admins need an assigned main team to create sub teams");
+      }
+
+      const assignedTeam = await Team.findById(req.user.assignedTeam);
+      if (!assignedTeam) {
+        throw httpError(404, "Assigned team not found");
+      }
+
+      const assignedMainTeam = splitTeamName(assignedTeam.name).mainTeam;
+      const requestedTeam = splitTeamName(req.body.name);
+
+      if (!requestedTeam.subTeam) {
+        throw httpError(400, "Admins can create sub teams only");
+      }
+
+      if (requestedTeam.mainTeam !== assignedMainTeam) {
+        throw httpError(403, "Admins can create sub teams only under their assigned team");
+      }
+
+      const team = await Team.create({
+        name: `${assignedMainTeam} - ${requestedTeam.subTeam}`,
+        siteLocation: req.body.siteLocation || assignedTeam.siteLocation,
+        supervisor: req.user._id
+      });
+      return res.status(201).json(team);
+    }
+
+    if (req.user.role !== "super_admin" && !req.user.permissions.includes("manage_teams")) {
+      throw httpError(403, "Missing permission: manage_teams");
+    }
+
     const team = await Team.create(req.body);
     res.status(201).json(team);
   } catch (error) {

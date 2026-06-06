@@ -74,6 +74,14 @@ button {
   letter-spacing: 0;
 }
 
+.brand-logo {
+  border-radius: 8px;
+  display: block;
+  height: 42px;
+  object-fit: contain;
+  width: 42px;
+}
+
 .brand-mark.small {
   color: #f5c343;
   font-size: 1.15rem;
@@ -185,6 +193,95 @@ button:disabled {
 .action-row button {
   background: #efe7d9;
   color: #30291f;
+}
+
+.install-app {
+  display: grid;
+  gap: 8px;
+  justify-items: stretch;
+}
+
+.install-app.compact {
+  justify-items: end;
+  max-width: 280px;
+}
+
+.install-app.edge {
+  position: fixed;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 5;
+}
+
+.install-button {
+  align-items: center;
+  background: #1d2521;
+  border: 1px solid rgba(245, 195, 67, 0.36);
+  border-radius: 6px;
+  color: #fff8e8;
+  display: inline-flex;
+  font-weight: 800;
+  gap: 8px;
+  justify-content: center;
+  min-height: 42px;
+  padding: 10px 14px;
+}
+
+.install-app.edge .install-button {
+  background: #df8b00;
+  border: 0;
+  border-radius: 999px 0 0 999px;
+  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.32);
+  color: #1a1205;
+  height: 62px;
+  min-height: 62px;
+  padding: 0 18px 0 20px;
+  width: 68px;
+}
+
+.install-app.edge .install-button svg {
+  height: 24px;
+  width: 24px;
+}
+
+.install-app.edge .install-button span {
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
+}
+
+.install-button:disabled {
+  cursor: default;
+  opacity: 1;
+}
+
+.install-app p {
+  color: #fff4db;
+  font-size: 0.86rem;
+  line-height: 1.45;
+  margin: 0;
+}
+
+.install-app.compact p {
+  color: #645f56;
+  text-align: right;
+}
+
+.install-app.edge p {
+  background: rgba(17, 24, 32, 0.9);
+  border: 1px solid rgba(245, 195, 67, 0.28);
+  border-radius: 8px;
+  color: #fff8e8;
+  max-width: 230px;
+  padding: 10px 12px;
+  position: absolute;
+  right: 76px;
+  top: 50%;
+  transform: translateY(-50%);
 }
 
 .error,
@@ -1118,6 +1215,15 @@ body {
   gap: 12px;
 }
 
+.admin-subteam-panel {
+  grid-column: 1 / -1;
+}
+
+.admin-subteam-form {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(180px, 1fr) minmax(180px, 1fr) minmax(180px, auto);
+}
+
 .icon-field {
   align-items: center;
   background: #ffffff;
@@ -1301,7 +1407,7 @@ body {
   display: grid;
   gap: 18px;
   grid-column: 1 / -1;
-  grid-template-columns: minmax(180px, 1fr) minmax(180px, 1fr) minmax(190px, 0.9fr);
+  grid-template-columns: minmax(180px, 1fr) minmax(180px, 1fr) minmax(180px, 1fr) minmax(190px, 0.9fr);
 }
 
 .report-actions label {
@@ -1358,6 +1464,11 @@ body {
   color: #df8b00;
   font-size: 1.28rem;
   gap: 12px;
+}
+
+.sidebar .brand-logo {
+  height: 36px;
+  width: 36px;
 }
 
 .sidebar-collapse {
@@ -1605,7 +1716,8 @@ body {
   }
 
   .report-actions,
-  .panel-grid {
+  .panel-grid,
+  .admin-subteam-form {
     grid-template-columns: 1fr;
   }
 
@@ -1640,6 +1752,40 @@ body {
 
   .content {
     padding: 12px;
+  }
+
+  .topbar {
+    align-items: start;
+    display: grid;
+    gap: 14px;
+  }
+
+  .install-app.compact {
+    justify-items: start;
+    max-width: none;
+  }
+
+  .install-app.compact p {
+    text-align: left;
+  }
+
+  .install-app.edge {
+    top: auto;
+    bottom: 24px;
+    transform: none;
+  }
+
+  .install-app.edge .install-button {
+    height: 58px;
+    min-height: 58px;
+    width: 64px;
+  }
+
+  .install-app.edge p {
+    bottom: 0;
+    right: 72px;
+    top: auto;
+    transform: none;
   }
 }
 
@@ -1694,12 +1840,31 @@ body {
   }
 
   .stat-grid {
-    grid-template-columns: 1fr;
+    gap: 12px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .stat-card {
-    min-height: 92px;
-    padding: 20px;
+    align-items: start;
+    gap: 10px;
+    grid-template-columns: 1fr;
+    min-height: 132px;
+    padding: 16px;
+  }
+
+  .stat-icon {
+    height: 48px;
+    width: 48px;
+  }
+
+  .stat-card span:not(.stat-icon) {
+    font-size: 0.75rem;
+    line-height: 1.25;
+    margin-bottom: 6px;
+  }
+
+  .stat-card strong {
+    font-size: 1.55rem;
   }
 
   .mini-table-head {
