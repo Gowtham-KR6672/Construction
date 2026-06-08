@@ -6,6 +6,7 @@ import authRoutes from "./routes/auth.routes.js";
 import userRoutes from "./routes/user.routes.js";
 import teamRoutes from "./routes/team.routes.js";
 import approvalRoutes from "./routes/approval.routes.js";
+import adminAttendanceRoutes from "./routes/adminAttendance.routes.js";
 
 dotenv.config();
 
@@ -53,6 +54,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/teams", teamRoutes);
 app.use("/api/approvals", approvalRoutes);
+app.use("/api/admin-attendance", adminAttendanceRoutes);
 
 app.use((err, _req, res, _next) => {
   const status = err.status || 500;
@@ -62,11 +64,20 @@ app.use((err, _req, res, _next) => {
 const isServerless = Boolean(process.env.VERCEL);
 
 if (!isServerless) {
-  const port = process.env.PORT || 5001;
+  const port = process.env.PORT || 5000;
   connectDatabase()
     .then(() => {
-      app.listen(port, () => {
+      const server = app.listen(port, () => {
         console.log(`API running on http://localhost:${port}`);
+      });
+
+      server.on("error", (err) => {
+        if (err.code === "EADDRINUSE") {
+          console.error(`Port ${port} is already in use. Stop the existing server or set PORT to another value.`);
+          process.exit(1);
+        }
+
+        throw err;
       });
     })
     .catch((err) => {

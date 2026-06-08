@@ -18,6 +18,8 @@ const userSchema = new mongoose.Schema(
     role: { type: String, enum: ROLES, required: true, default: "admin" },
     permissions: [{ type: String, enum: ADMIN_PERMISSIONS }],
     assignedTeam: { type: mongoose.Schema.Types.ObjectId, ref: "Team", default: null },
+    monthlySalary: { type: Number, min: 0, default: 0 },
+    dailySalary: { type: Number, min: 0, default: 0 },
     status: { type: String, enum: ["active", "inactive"], default: "active" }
   },
   { timestamps: true }
@@ -41,6 +43,8 @@ userSchema.methods.toSafeJSON = function toSafeJSON() {
     role: this.role,
     permissions: this.permissions,
     assignedTeam: this.assignedTeam,
+    monthlySalary: this.monthlySalary,
+    dailySalary: this.dailySalary,
     status: this.status
   };
 };

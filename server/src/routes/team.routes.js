@@ -151,6 +151,65 @@ router.post("/", requireAuth, async (req, res, next) => {
   }
 });
 
+router.patch("/member-team/move", requireAuth, requireRole("super_admin"), async (req, res, next) => {
+  try {
+    const { sourceTeamId, targetTeamId, trade } = req.body;
+
+    if (!sourceTeamId || !targetTeamId || !String(trade || "").trim()) {
+      throw httpError(400, "Source site, target site, and team name are required");
+    }
+
+    if (String(sourceTeamId) === String(targetTeamId)) {
+      throw httpError(400, "Choose a different target site");
+    }
+
+    const [sourceTeam, targetTeam] = await Promise.all([
+      Team.findById(sourceTeamId),
+      Team.findById(targetTeamId)
+    ]);
+
+    if (!sourceTeam) throw httpError(404, "Source site not found");
+    if (!targetTeam) throw httpError(404, "Target site not found");
+
+    const memberTeamName = String(trade).trim();
+    const members = await Member.find({ team: sourceTeam._id, trade: memberTeamName }).select("_id");
+    const memberIds = members.map((member) => member._id);
+
+    if (!memberIds.length) {
+      throw httpError(404, "No members found for the selected team name");
+    }
+
+    await Promise.all([
+      Member.updateMany(
+        { _id: { $in: memberIds } },
+        { $set: { team: targetTeam._id, site: targetTeam.siteLocation } }
+      ),
+      Attendance.updateMany(
+        { team: sourceTeam._id, member: { $in: memberIds } },
+        { $set: { team: targetTeam._id } }
+      ),
+      Overtime.updateMany(
+        { team: sourceTeam._id, member: { $in: memberIds } },
+        { $set: { team: targetTeam._id } }
+      ),
+      ApprovalRequest.updateMany(
+        { team: sourceTeam._id, memberId: { $in: memberIds } },
+        { $set: { team: targetTeam._id } }
+      )
+    ]);
+
+    res.json({
+      message: "Member team moved",
+      movedMembers: memberIds.length,
+      from: sourceTeam,
+      to: targetTeam,
+      trade: memberTeamName
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 router.patch("/:id", requireAuth, requirePermission("manage_teams"), async (req, res, next) => {
   try {
     const team = await Team.findByIdAndUpdate(req.params.id, req.body, { new: true });
@@ -325,6 +384,8 @@ router.put("/:teamId/members/:memberId/attendance", requireAuth, async (req, res
       { team: team._id, member: member._id, date },
       {
         $set: { status, addedBy: req.user._id },
+        // Capture the current salary only when this date is first marked.
+        // Later salary changes must not rewrite old attendance salaries.
         $setOnInsert: { dailySalary: member.fixedSalary }
       },
       { new: true, upsert: true }

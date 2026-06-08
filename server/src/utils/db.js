@@ -1,3 +1,4 @@
+import dns from "node:dns";
 import mongoose from "mongoose";
 
 let cachedConnection = global.__mongooseConnection;
@@ -19,6 +20,18 @@ export async function connectDatabase() {
 
   if (!cachedConnection.promise) {
     mongoose.set("strictQuery", true);
+
+    if (uri.startsWith("mongodb+srv://")) {
+      const dnsServers = (process.env.MONGO_DNS_SERVERS || "8.8.8.8,1.1.1.1")
+        .split(",")
+        .map((server) => server.trim())
+        .filter(Boolean);
+
+      if (dnsServers.length) {
+        dns.setServers(dnsServers);
+      }
+    }
+
     cachedConnection.promise = mongoose
       .connect(uri, { bufferCommands: false })
       .then((mongooseInstance) => {

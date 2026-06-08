@@ -135,6 +135,24 @@ button {
   color: #5f5b54;
 }
 
+.login-panel .install-app {
+  border-top: 1px solid rgba(255, 255, 255, 0.22);
+  margin-top: 2px;
+  padding-top: 16px;
+}
+
+.login-panel .install-button {
+  background: rgba(29, 37, 33, 0.82);
+  border-color: rgba(255, 255, 255, 0.28);
+  color: #fff8e8;
+  width: 100%;
+}
+
+.login-panel .install-app p {
+  color: rgba(255, 255, 255, 0.82);
+  text-align: center;
+}
+
 h1,
 h2,
 p {
@@ -582,6 +600,402 @@ button:disabled {
   min-height: 124px;
 }
 
+.dashboard-nav-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: -8px;
+}
+
+.dashboard-nav-button {
+  align-items: center;
+  background: #fffaf3;
+  border: 1px solid #f0d5ad;
+  border-radius: 8px;
+  color: #30291f;
+  display: inline-flex;
+  font-weight: 800;
+  gap: 8px;
+  min-height: 42px;
+  padding: 10px 14px;
+}
+
+.dashboard-nav-button.active {
+  background: #1d2521;
+  border-color: #1d2521;
+  color: #fff8e8;
+}
+
+.admin-data-page {
+  display: grid;
+  gap: 18px;
+}
+
+.admin-data-summary-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(2, minmax(220px, 1fr));
+}
+
+.admin-data-summary-card {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #e7e7e7;
+  border-radius: 9px;
+  box-shadow: 0 8px 26px rgba(15, 23, 42, 0.055);
+  display: grid;
+  gap: 16px;
+  grid-template-columns: auto 1fr;
+  min-height: 92px;
+  padding: 20px;
+}
+
+.admin-data-summary-card span:not(.stat-icon) {
+  color: #25303a;
+  display: block;
+  font-size: 0.86rem;
+  font-weight: 700;
+  margin-bottom: 7px;
+}
+
+.admin-data-summary-card strong {
+  color: #071018;
+  display: block;
+  font-size: 1.8rem;
+  line-height: 1;
+}
+
+.selected-admin-summary-panel {
+  display: grid;
+  gap: 16px;
+}
+
+.selected-admin-summary-header {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  justify-content: space-between;
+}
+
+.selected-admin-summary-header span {
+  color: #746a5d;
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 800;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+}
+
+.selected-admin-summary-header h2 {
+  font-size: 1.35rem;
+  margin-bottom: 2px;
+}
+
+.selected-admin-summary-header p {
+  color: #746a5d;
+  margin-bottom: 0;
+}
+
+.selected-admin-summary-header button {
+  align-items: center;
+  background: #efe7d9;
+  border: 0;
+  border-radius: 6px;
+  color: #30291f;
+  display: inline-flex;
+  gap: 8px;
+  min-height: 40px;
+  padding: 9px 12px;
+}
+
+.selected-admin-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.selected-admin-metrics {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.selected-admin-metrics div {
+  background: #fbf8f1;
+  border: 1px solid #e0d8c9;
+  border-radius: 7px;
+  min-width: 0;
+  padding: 12px;
+}
+
+.selected-admin-metrics span {
+  color: #746a5d;
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.selected-admin-metrics strong {
+  color: #071018;
+  display: block;
+  font-size: 1.1rem;
+  line-height: 1.15;
+}
+
+.admin-data-page-header {
+  background: #ffffff;
+  border: 1px solid #e7e7e7;
+  border-radius: 9px;
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px;
+}
+
+.admin-data-page-header p {
+  margin-bottom: 0;
+}
+
+.admin-data-page-title {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+}
+
+.admin-data-page-title h2 {
+  font-size: 1.25rem;
+  margin-bottom: 0;
+}
+
+.admin-data-back-button {
+  min-height: 42px;
+}
+
+.admin-data-panel {
+  background: #ffffff;
+  border: 1px solid #e7e7e7;
+  border-radius: 9px;
+  box-shadow: 0 8px 26px rgba(15, 23, 42, 0.055);
+  padding: 20px;
+}
+
+.admin-data-table-shell {
+  gap: 0;
+}
+
+.member-team-transfer-card {
+  align-items: center;
+  background: #fbf8f1;
+  border: 1px solid #e0d8c9;
+  border-radius: 8px;
+  display: grid;
+  gap: 14px;
+  grid-template-columns: minmax(180px, 0.85fr) minmax(0, 2.2fr);
+  margin-bottom: 18px;
+  padding: 14px;
+}
+
+.member-team-transfer-card strong {
+  color: #131a22;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.member-team-transfer-card span {
+  color: #6d665b;
+  display: block;
+  font-size: 0.86rem;
+  line-height: 1.35;
+}
+
+.member-team-transfer-grid {
+  align-items: center;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(3, minmax(130px, 1fr)) auto;
+}
+
+.member-team-transfer-grid select {
+  min-width: 0;
+  width: 100%;
+}
+
+.member-team-transfer-grid button {
+  min-height: 38px;
+  padding: 8px 14px;
+  white-space: nowrap;
+}
+
+.admin-data-grid,
+.admin-data-row {
+  align-items: center;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 1fr 1.4fr 1fr 0.8fr 0.8fr auto;
+}
+
+.admin-data-grid--move,
+.admin-data-row {
+  grid-template-columns: 1fr 1.3fr 1fr 0.85fr 0.85fr auto 1.35fr;
+}
+
+.admin-data-grid {
+  border-bottom: 1px solid #e7e7e7;
+  color: #6e7781;
+  font-size: 0.78rem;
+  padding-bottom: 10px;
+}
+
+.admin-data-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.admin-data-row {
+  background: #fbf8f1;
+  border: 1px solid #e0d8c9;
+  border-radius: 7px;
+  padding: 12px;
+}
+
+.admin-data-row strong {
+  color: #131a22;
+}
+
+.admin-data-row .status {
+  justify-self: end;
+}
+
+.admin-data-transfer {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.admin-data-transfer select {
+  min-width: 0;
+  width: 100%;
+}
+
+.admin-data-transfer button {
+  min-height: 38px;
+  padding: 8px 12px;
+  white-space: nowrap;
+}
+
+.admin-attendance-control-panel {
+  display: grid;
+  gap: 16px;
+}
+
+.admin-attendance-control-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.admin-attendance-control-grid label {
+  display: grid;
+  gap: 6px;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.admin-attendance-control-grid input,
+.admin-attendance-control-grid select {
+  min-height: 38px;
+  width: 100%;
+}
+
+.admin-select-dropdown {
+  background: #fbf8f1;
+  border: 1px solid #e0d8c9;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.admin-select-dropdown summary {
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.admin-select-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+  max-height: 220px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.admin-select-item {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #e7d8be;
+  border-radius: 7px;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: auto 1fr auto;
+  padding: 8px 10px;
+}
+
+.admin-select-item small {
+  color: #746a5d;
+}
+
+.admin-attendance-actions {
+  justify-content: flex-end;
+}
+
+.admin-attendance-head,
+.admin-attendance-row {
+  grid-template-columns: 1.2fr 1fr 0.8fr 1.2fr auto;
+}
+
+.admin-attendance-list {
+  display: grid;
+  gap: 10px;
+  max-height: calc((4 * 64px) + (3 * 10px));
+  overflow-y: auto;
+  padding-right: 4px;
+  scrollbar-gutter: stable;
+}
+
+.admin-attendance-row {
+  align-items: center;
+  background: #fbf8f1;
+  border: 1px solid #e0d8c9;
+  border-radius: 7px;
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+}
+
+.admin-attendance-row .status.present {
+  background: #dff3df;
+  color: #176232;
+}
+
+.admin-attendance-row .status.absent {
+  background: #ffe1db;
+  color: #8c2f1f;
+}
+
+.admin-attendance-row .status.half {
+  background: #fff0bf;
+  color: #6a4a00;
+}
+
+.admin-data-row span {
+  color: #5f574d;
+  font-size: 0.9rem;
+}
+
 .admin-permissions,
 .request-card,
 .team-card {
@@ -596,6 +1010,13 @@ button:disabled {
 .user-password-list {
   display: grid;
   gap: 12px;
+}
+
+.table-panel .request-list {
+  max-height: 420px;
+  overflow-y: auto;
+  padding-right: 6px;
+  scrollbar-gutter: stable;
 }
 
 .user-form-panel {
@@ -630,6 +1051,13 @@ button:disabled {
   grid-template-columns: minmax(160px, 1fr) minmax(180px, 1fr) auto;
 }
 
+.team-transfer-row {
+  align-items: center;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(160px, 1fr) auto;
+}
+
 .selected-team-card span {
   color: #6d665b;
   display: block;
@@ -649,7 +1077,35 @@ button:disabled {
 }
 
 .password-row:has(select) {
-  grid-template-columns: minmax(150px, 1fr) minmax(170px, 1fr) minmax(180px, 1fr) auto;
+  grid-template-columns: minmax(150px, 1fr) minmax(170px, 1fr) minmax(180px, 1fr) minmax(120px, 0.6fr) minmax(120px, 0.6fr) auto;
+}
+
+.password-row.admin-edit-row {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.password-row.admin-edit-row input,
+.password-row.admin-edit-row select {
+  min-width: 0;
+  width: 100%;
+}
+
+.password-row.admin-edit-row .action-row {
+  grid-column: 1 / -1;
+  flex-wrap: nowrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.password-row.admin-edit-row .action-row button {
+  padding-left: 9px;
+  padding-right: 9px;
+}
+
+.admin-salary-row {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .site-edit-row {
@@ -694,16 +1150,50 @@ button:disabled {
   padding: 14px;
 }
 
+.request-card {
+  gap: 10px;
+}
+
 .request-card span {
   color: #6d665b;
   display: block;
   font-size: 0.9rem;
 }
 
+.request-summary {
+  align-items: stretch;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(120px, 1.1fr) repeat(4, minmax(100px, 1fr));
+}
+
+.request-summary div {
+  background: #fffdf8;
+  border: 1px solid #e4dccd;
+  border-radius: 6px;
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 8px 10px;
+}
+
+.request-summary span {
+  color: #746f66;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+}
+
+.request-summary strong {
+  color: #17201b;
+  font-size: 0.86rem;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
 .request-details {
   display: grid;
-  gap: 10px;
-  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 8px;
+  grid-template-columns: repeat(7, minmax(100px, 1fr));
 }
 
 .request-details div {
@@ -712,18 +1202,21 @@ button:disabled {
   border-radius: 6px;
   display: grid;
   gap: 4px;
-  padding: 10px;
+  min-width: 0;
+  padding: 8px 10px;
 }
 
 .request-details span {
   color: #746f66;
-  font-size: 0.78rem;
+  font-size: 0.7rem;
   text-transform: uppercase;
 }
 
 .request-details strong {
   color: #17201b;
-  font-size: 0.95rem;
+  font-size: 0.86rem;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
 }
 
 .status {
@@ -763,6 +1256,16 @@ button:disabled {
 .action-row.compact button {
   min-height: 34px;
   padding: 6px 10px;
+}
+
+.action-row .approve-button {
+  background: #dff3df;
+  color: #1f6337;
+}
+
+.action-row .reject-button {
+  background: #ffe1db;
+  color: #8c2f1f;
 }
 
 .chip-row span {
@@ -817,6 +1320,171 @@ button:disabled {
   gap: 12px;
 }
 
+.team-workspace {
+  align-items: start;
+  display: grid;
+  gap: 18px;
+  grid-template-columns: minmax(280px, 0.42fr) minmax(0, 1fr);
+}
+
+.team-workspace.single-column {
+  grid-template-columns: 1fr;
+}
+
+.team-workspace-left {
+  position: sticky;
+  top: 22px;
+}
+
+.team-workspace-right {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+
+.attendance-setup-panel {
+  align-content: start;
+  display: grid;
+  gap: 16px;
+  min-height: 100%;
+}
+
+.attendance-setup-panel h2 {
+  margin: 0;
+}
+
+.attendance-setup-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(120px, 1fr));
+}
+
+.attendance-setup-grid div {
+  background: #fffdf8;
+  border: 1px solid #e4dccd;
+  border-radius: 6px;
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+}
+
+.attendance-setup-grid span {
+  color: #746f66;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.attendance-setup-grid strong {
+  color: #30291f;
+  font-size: 1.15rem;
+  font-weight: 800;
+}
+
+.admin-weekly-attendance {
+  display: grid;
+  gap: 12px;
+}
+
+.admin-week-grid {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+}
+
+.admin-week-day {
+  align-content: start;
+  background: #fffdf8;
+  border: 1px solid #e4dccd;
+  border-radius: 6px;
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  padding: 9px;
+}
+
+.admin-week-day > span {
+  color: #30291f;
+  font-size: 0.76rem;
+  font-weight: 800;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+
+.admin-attendance-select {
+  appearance: none;
+  min-height: 34px;
+  padding: 6px 8px;
+  width: 100%;
+}
+
+.admin-attendance-select.present {
+  background: #dff3df;
+  border-color: #92c99b;
+  color: #176232;
+}
+
+.admin-attendance-select.absent {
+  background: #ffe1db;
+  border-color: #e39a8d;
+  color: #8c2f1f;
+}
+
+.admin-attendance-select.half {
+  background: #fff0bf;
+  border-color: #e2c15d;
+  color: #6a4a00;
+}
+
+.admin-week-day small {
+  color: #6d665b;
+  font-size: 0.76rem;
+  line-height: 1.2;
+}
+
+.admin-leave-pill {
+  background: #fff0bf;
+  border: 1px solid #e2c15d;
+  border-radius: 6px;
+  color: #6a4a00;
+  display: inline-flex;
+  font-size: 0.78rem;
+  justify-content: center;
+  min-height: 34px;
+  padding: 7px 8px;
+  text-align: center;
+}
+
+.admin-leave-pill.muted-pill {
+  background: #f4efe6;
+  border-color: #dfd2bf;
+  color: #6d665b;
+}
+
+.today-pill {
+  background: #dff3df;
+  border-color: #92c99b;
+  color: #176232;
+}
+
+.attendance-section-heading {
+  align-items: end;
+  border-bottom: 1px solid #eadfce;
+  display: grid;
+  gap: 4px;
+  grid-template-columns: minmax(180px, auto) minmax(0, 1fr);
+  padding-bottom: 10px;
+}
+
+.attendance-section-heading h2,
+.attendance-section-heading p {
+  margin: 0;
+}
+
+.attendance-section-heading p {
+  font-size: 0.86rem;
+  text-align: right;
+}
+
 .member-subteam-row {
   display: grid;
   gap: 12px;
@@ -844,7 +1512,7 @@ button:disabled {
 
 .member-table {
   display: grid;
-  gap: 10px;
+  gap: 14px;
 }
 
 .member-row {
@@ -855,14 +1523,58 @@ button:disabled {
 }
 
 .salary-row {
-  align-items: center;
-  grid-template-columns: 150px minmax(330px, 0.85fr) minmax(300px, 0.5fr) minmax(250px, auto);
-  justify-content: start;
+  align-items: start;
+  background: linear-gradient(180deg, #fffdf8 0%, #fbf8f1 100%);
+  border-color: #dacfbf;
+  box-shadow: 0 10px 24px rgba(38, 33, 24, 0.06);
+  grid-template-columns: minmax(185px, 0.7fr) minmax(0, 1.15fr) max-content auto;
+  padding: 16px;
+  width: 100%;
 }
 
-.salary-row > div:first-child {
+.member-profile {
+  align-content: start;
   display: grid;
-  gap: 5px;
+  gap: 4px;
+  grid-template-columns: 42px 1fr;
+}
+
+.member-profile .member-avatar {
+  align-items: center;
+  background: #1d2521;
+  border-radius: 8px;
+  color: #f5c343;
+  display: inline-flex;
+  font-size: 1.05rem;
+  font-weight: 900;
+  grid-row: span 4;
+  height: 42px;
+  justify-content: center;
+  width: 42px;
+}
+
+.member-profile strong {
+  font-size: 1rem;
+}
+
+.member-profile span:not(.member-avatar) {
+  color: #5f574d;
+  font-size: 0.86rem;
+  line-height: 1.3;
+}
+
+.member-team-label {
+  color: #8a6d35 !important;
+  font-size: 0.72rem !important;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.member-team-name {
+  color: #1d2521;
+  font-size: 0.96rem;
+  line-height: 1.25;
 }
 
 .salary-controls,
@@ -877,27 +1589,28 @@ button:disabled {
   color: #4f493f;
   display: grid;
   gap: 6px;
-  grid-template-columns: repeat(5, minmax(58px, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  min-width: 0;
 }
 
 .salary-summary div {
-  background: #fffdf8;
-  border: 1px solid #e4dccd;
+  background: #ffffff;
+  border: 1px solid #ded4c4;
   border-radius: 6px;
   display: grid;
   gap: 4px;
-  min-height: 50px;
-  padding: 6px 8px;
+  min-height: 44px;
+  padding: 5px 7px;
 }
 
 .salary-summary div span {
   color: #746f66;
-  font-size: 0.72rem;
+  font-size: 0.64rem;
 }
 
 .salary-summary div strong {
   color: #17201b;
-  font-size: 0.92rem;
+  font-size: 0.88rem;
 }
 
 .salary-summary small {
@@ -914,8 +1627,17 @@ button:disabled {
   min-width: 0;
 }
 
+.member-toolbar:empty {
+  display: none;
+}
+
 .member-actions {
   flex-wrap: nowrap;
+}
+
+.member-actions button {
+  min-height: 36px;
+  white-space: nowrap;
 }
 
 .today-ot-form {
@@ -946,28 +1668,44 @@ button:disabled {
 }
 
 .salary-controls {
-  grid-template-columns: 1fr 1fr auto;
+  align-items: end;
+  background: #f6efe3;
+  border: 1px solid #e2d6c5;
+  border-radius: 8px;
+  column-gap: 100px;
+  row-gap: 8px;
+  grid-template-columns: 78px 78px auto;
+  min-width: 0;
+  padding: 10px;
+  justify-self: end;
 }
 
 .salary-controls label {
   color: #5e5a52;
   display: grid;
-  font-size: 0.82rem;
+  font-size: 0.76rem;
   gap: 6px;
+}
+
+.salary-controls input {
+  min-height: 28px;
+  padding: 7px 9px;
+  max-width: 150px;
 }
 
 .salary-controls button,
 .overtime-form button {
   align-items: center;
-  background: #efe7d9;
+  background: #1d2521;
   border: 0;
   border-radius: 6px;
-  color: #30291f;
+  color: #fff8e8;
   display: inline-flex;
   gap: 8px;
   justify-content: center;
-  min-height: 42px;
-  padding: 10px 12px;
+  min-height: 38px;
+  padding: 8px 11px;
+  white-space: nowrap;
 }
 
 .overtime-form {
@@ -989,12 +1727,12 @@ button:disabled {
 }
 
 .attendance-member {
-  background: #fbf8f1;
-  border: 1px solid #e0d8c9;
+  background: #ffffff;
+  border: 1px solid #ded4c4;
   border-radius: 8px;
   display: grid;
-  gap: 12px;
-  padding: 14px;
+  gap: 10px;
+  padding: 12px;
 }
 
 .inline-attendance {
@@ -1015,16 +1753,17 @@ button:disabled {
 .attendance-grid {
   display: grid;
   gap: 8px;
-  grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
+  grid-template-columns: repeat(7, minmax(0, 1fr));
 }
 
 .attendance-day {
-  background: #fffdf8;
+  background: #fbf8f1;
   border: 1px solid #e4dccd;
   border-radius: 6px;
   display: grid;
   gap: 6px;
   padding: 8px;
+  min-width: 0;
 }
 
 .attendance-day > span {
@@ -1411,7 +2150,7 @@ body {
   display: grid;
   gap: 18px;
   grid-column: 1 / -1;
-  grid-template-columns: minmax(180px, 1fr) minmax(180px, 1fr) minmax(180px, 1fr) minmax(190px, 0.9fr);
+  grid-template-columns: repeat(4, minmax(160px, 1fr)) minmax(190px, 0.8fr);
 }
 
 .report-actions label {
@@ -1672,13 +2411,73 @@ body {
   color: #df8b00;
 }
 
+.sidebar-calendar {
+  background: #fffaf3;
+  border: 1px solid #f1dfc3;
+  border-radius: 12px;
+  display: grid;
+  gap: 12px;
+  margin-top: auto;
+  padding: 14px;
+}
+
+.sidebar-calendar > div:first-child {
+  display: grid;
+  gap: 3px;
+}
+
+.sidebar-calendar strong {
+  color: #111820;
+  font-size: 0.95rem;
+}
+
+.sidebar-calendar > div:first-child span {
+  color: #6f7780;
+  font-size: 0.78rem;
+}
+
+.calendar-weekdays,
+.calendar-days {
+  display: grid;
+  gap: 5px;
+  grid-template-columns: repeat(7, 1fr);
+  text-align: center;
+}
+
+.calendar-weekdays span {
+  color: #8a6b3d;
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.calendar-days span {
+  align-items: center;
+  border-radius: 6px;
+  color: #2d3540;
+  display: inline-flex;
+  font-size: 0.75rem;
+  font-weight: 700;
+  height: 24px;
+  justify-content: center;
+  min-width: 0;
+}
+
+.calendar-days span:empty {
+  visibility: hidden;
+}
+
+.calendar-days .today {
+  background: #df8b00;
+  color: #ffffff;
+}
+
 .sidebar .ghost-button {
   background: #fffaf3;
   border: 1px solid #f1dfc3;
   border-radius: 9px;
   color: #df8b00;
   font-weight: 700;
-  margin-top: auto;
+  margin-top: 0;
   margin-bottom: 0;
   min-height: 55px;
 }
@@ -1688,6 +2487,40 @@ body {
   min-height: 100vh;
   padding: 22px 28px 32px 0;
   width: auto;
+}
+
+@media (max-width: 1380px) {
+  .salary-row {
+    grid-template-columns: minmax(180px, 0.7fr) minmax(0, 1.1fr) max-content auto;
+  }
+
+  .salary-summary {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .salary-controls {
+    column-gap: 26px;
+    grid-template-columns: 74px 74px auto;
+  }
+}
+
+@media (max-width: 1180px) {
+  .salary-row {
+    grid-template-columns: minmax(190px, 0.8fr) minmax(0, 1.2fr);
+  }
+
+  .salary-controls {
+    grid-column: 1 / -1;
+  }
+
+  .today-ot-form,
+  .member-toolbar {
+    grid-column: 1 / -1;
+  }
+
+  .attendance-grid {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  }
 }
 
 @media (max-width: 980px) {
@@ -1724,6 +2557,28 @@ body {
     grid-template-columns: 1fr;
   }
 
+  .request-summary,
+  .request-details,
+  .admin-data-summary-grid,
+  .selected-admin-metrics,
+  .member-team-transfer-card,
+  .member-team-transfer-grid,
+  .admin-data-grid,
+  .admin-data-row,
+  .admin-attendance-head,
+  .admin-attendance-row,
+  .admin-attendance-control-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-data-grid {
+    display: none;
+  }
+
+  .admin-attendance-head {
+    display: none;
+  }
+
   .loading-card-grid {
     grid-template-columns: 1fr;
   }
@@ -1731,12 +2586,18 @@ body {
   .salary-row,
   .salary-summary,
   .salary-controls,
+  .admin-salary-row,
+  .attendance-setup-grid,
+  .admin-week-grid,
   .overtime-form,
   .today-ot-form,
   .member-subteam-row,
   .team-total,
   .password-row,
   .selected-team-card,
+  .selected-admin-summary-header,
+  .team-transfer-row,
+  .admin-select-item,
   .attendance-grid {
     grid-template-columns: 1fr;
   }

@@ -5,6 +5,14 @@ import { httpError } from "../utils/httpError.js";
 
 const router = express.Router();
 
+function calculateDailySalary(monthlySalary, referenceDate = new Date()) {
+  const monthly = Number(monthlySalary || 0);
+  if (!Number.isFinite(monthly) || monthly <= 0) return 0;
+
+  const daysInMonth = new Date(referenceDate.getFullYear(), referenceDate.getMonth() + 1, 0).getDate();
+  return daysInMonth > 0 ? monthly / daysInMonth : 0;
+}
+
 router.get("/", requireAuth, requirePermission("manage_users"), async (_req, res) => {
   const users = await User.find().select("-password").populate("assignedTeam", "name siteLocation");
   res.json(users);
@@ -12,7 +20,10 @@ router.get("/", requireAuth, requirePermission("manage_users"), async (_req, res
 
 router.post("/", requireAuth, requireRole("super_admin"), async (req, res, next) => {
   try {
-    const user = await User.create(req.body);
+    const user = await User.create({
+      ...req.body,
+      dailySalary: calculateDailySalary(req.body.monthlySalary)
+    });
     res.status(201).json(user.toSafeJSON());
   } catch (error) {
     next(error);
@@ -41,11 +52,32 @@ router.patch("/:id/password", requireAuth, requireRole("super_admin"), async (re
 
 router.patch("/:id", requireAuth, requireRole("super_admin"), async (req, res, next) => {
   try {
-    const allowed = ["name", "email", "role", "permissions", "assignedTeam", "status"];
+    const allowed = ["name", "email", "role", "permissions", "assignedTeam", "monthlySalary", "status"];
     const updates = Object.fromEntries(Object.entries(req.body).filter(([key]) => allowed.includes(key)));
-    const user = await User.findByIdAndUpdate(req.params.id, updates, { new: true }).select("-password");
 
+    const user = await User.findById(req.params.id);
     if (!user) throw httpError(404, "User not found");
+
+    if (Object.prototype.hasOwnProperty.call(updates, "assignedTeam")) {
+      const nextAssignedTeam = updates.assignedTeam || null;
+
+      if (nextAssignedTeam) {
+        await User.updateMany(
+          { assignedTeam: nextAssignedTeam, _id: { $ne: req.params.id } },
+          { $set: { assignedTeam: null } }
+        );
+      }
+
+      updates.assignedTeam = nextAssignedTeam;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(updates, "monthlySalary")) {
+      updates.dailySalary = calculateDailySalary(updates.monthlySalary);
+    }
+
+    Object.assign(user, updates);
+    await user.save();
+    await user.populate("assignedTeam", "name siteLocation");
 
     res.json(user);
   } catch (error) {
