@@ -580,7 +580,7 @@ function Login({ setUser, error, setError }) {
       <section className="login-hero">
         <div className="brand-mark">
           <img src={logoAsset} alt="" className="brand-logo" />
-          <span>Valar Constraction Workforce</span>
+          <span>Valar Construction Workforce</span>
         </div>
         <h1>Construction admin login and site approvals</h1>
         <p>Manage site admins, assigned locations, crews, attendance, salary, and approvals.</p>
@@ -729,7 +729,7 @@ function Dashboard({ user, logout }) {
         <div className="sidebar-brand">
           <div className="brand-mark small">
             <img src={logoAsset} alt="" className="brand-logo" />
-            <span>Valar Constraction</span>
+            <span>Valar Construction</span>
           </div>
           <button className="sidebar-collapse" type="button" aria-label="Collapse navigation">
             <ChevronLeft size={22} />
