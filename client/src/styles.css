@@ -1640,6 +1640,26 @@ button:disabled {
   white-space: nowrap;
 }
 
+.member-move-control {
+  align-items: center;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(135px, 1fr) auto;
+  min-width: 220px;
+}
+
+.member-move-control select {
+  min-height: 36px;
+  min-width: 0;
+  width: 100%;
+}
+
+.member-move-control button {
+  min-height: 36px;
+  padding: 7px 10px;
+  white-space: nowrap;
+}
+
 .today-ot-form {
   align-items: start;
   display: grid;
@@ -2598,6 +2618,7 @@ body {
   .selected-admin-summary-header,
   .team-transfer-row,
   .admin-select-item,
+  .member-move-control,
   .attendance-grid {
     grid-template-columns: 1fr;
   }

@@ -300,6 +300,70 @@ router.patch("/:teamId/members/:memberId/salary", requireAuth, requireRole("supe
   }
 });
 
+router.patch("/:teamId/members/:memberId/move", requireAuth, requireRole("admin", "super_admin"), async (req, res, next) => {
+  try {
+    const { targetAdminId } = req.body;
+
+    if (!targetAdminId) {
+      throw httpError(400, "Target admin is required");
+    }
+
+    if (req.user.role === "admin" && !(await userCanManageTeam(req.user, req.params.teamId))) {
+      throw httpError(403, "Admins can only move members from their assigned site");
+    }
+
+    const [sourceTeam, targetAdmin, member] = await Promise.all([
+      Team.findById(req.params.teamId),
+      User.findOne({ _id: targetAdminId, role: "admin", status: "active" }).populate("assignedTeam", "name siteLocation"),
+      Member.findOne({ _id: req.params.memberId, team: req.params.teamId })
+    ]);
+
+    if (!sourceTeam) throw httpError(404, "Source site not found");
+    if (!targetAdmin) throw httpError(404, "Target admin not found");
+    if (!targetAdmin.assignedTeam) throw httpError(400, "Target admin has no assigned site");
+    if (!member) throw httpError(404, "Team member not found");
+
+    const targetTeam = await Team.findById(targetAdmin.assignedTeam._id || targetAdmin.assignedTeam);
+    if (!targetTeam) throw httpError(404, "Target admin site not found");
+
+    if (String(sourceTeam._id) === String(targetTeam._id)) {
+      throw httpError(400, "Member is already in this admin site");
+    }
+
+    await Promise.all([
+      Member.updateOne(
+        { _id: member._id },
+        { $set: { team: targetTeam._id, site: targetTeam.siteLocation } }
+      ),
+      Attendance.updateMany(
+        { team: sourceTeam._id, member: member._id },
+        { $set: { team: targetTeam._id } }
+      ),
+      Overtime.updateMany(
+        { team: sourceTeam._id, member: member._id },
+        { $set: { team: targetTeam._id } }
+      ),
+      ApprovalRequest.updateMany(
+        { team: sourceTeam._id, memberId: member._id },
+        { $set: { team: targetTeam._id } }
+      )
+    ]);
+
+    res.json({
+      message: "Team member moved",
+      memberId: member._id,
+      targetAdmin: {
+        _id: targetAdmin._id,
+        name: targetAdmin.name
+      },
+      from: sourceTeam,
+      to: targetTeam
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 router.post("/:teamId/members/:memberId/overtime", requireAuth, async (req, res, next) => {
   try {
     if (req.user.role !== "admin") {

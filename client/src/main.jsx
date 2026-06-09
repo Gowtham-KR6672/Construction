@@ -633,6 +633,7 @@ function Dashboard({ user, logout }) {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const canManageUsers = user.role === "super_admin" || user.permissions?.includes("manage_users");
   const canViewApprovals = user.role === "super_admin" || user.permissions?.includes("view_approvals");
+  const canLoadAdminTargets = user.role === "admin" || canManageUsers;
   const assignedTeamId = user.assignedTeam?._id || user.assignedTeam || "";
   const isAdmin = user.role === "admin";
 
@@ -647,7 +648,7 @@ function Dashboard({ user, logout }) {
       const [teamData, approvalData, userData] = await Promise.all([
         apiRequest("/teams"),
         canViewApprovals ? apiRequest("/approvals") : Promise.resolve([]),
-        canManageUsers ? apiRequest("/users") : Promise.resolve([])
+        canManageUsers ? apiRequest("/users") : canLoadAdminTargets ? apiRequest("/users/admins") : Promise.resolve([])
       ]);
       setTeams(teamData);
       setApprovals(approvalData);
@@ -926,7 +927,7 @@ function Dashboard({ user, logout }) {
 
                 {user.role === "super_admin" && <ReportsPanel teams={visibleTeams} />}
 
-                <TeamPanel user={user} teams={visibleTeams} reload={refreshData} setMessage={setMessage} />
+                <TeamPanel user={user} users={users} teams={visibleTeams} reload={refreshData} setMessage={setMessage} />
               </>
             )}
           </>
@@ -2187,11 +2188,13 @@ function ReportsPanel({ teams }) {
   );
 }
 
-function TeamPanel({ user, teams, reload, setMessage }) {
+function TeamPanel({ user, users = [], teams, reload, setMessage }) {
   const [memberForm, setMemberForm] = useState({ name: "", trade: "", teamDetail: "", phone: "", site: "" });
   const [selectedMemberTeamId, setSelectedMemberTeamId] = useState("");
   const [salaryForms, setSalaryForms] = useState({});
   const [dailyOvertimeForms, setDailyOvertimeForms] = useState({});
+  const [memberMoveForms, setMemberMoveForms] = useState({});
+  const [movingMemberId, setMovingMemberId] = useState("");
   const [adminAttendance, setAdminAttendance] = useState({ monthlySalary: user.monthlySalary || 0, totalEarnings: 0, entries: [] });
   const [adminAttendanceForms, setAdminAttendanceForms] = useState({});
   const currentWeek = useMemo(() => weekDates(), []);
@@ -2236,6 +2239,17 @@ function TeamPanel({ user, teams, reload, setMessage }) {
 
   function dailyOvertimeFormFor(member, date) {
     return dailyOvertimeForms[`${member._id}-${date}`] || { hours: "", note: "" };
+  }
+
+  function targetAdminsFor(team) {
+    return users
+      .filter((item) => item.role === "admin" && item.status !== "inactive" && (item.assignedTeam?._id || item.assignedTeam))
+      .filter((item) => {
+        const targetTeamId = item.assignedTeam?._id || item.assignedTeam;
+        if (String(targetTeamId) === String(team._id)) return false;
+        if (user.role === "admin" && String(item._id || item.id) === String(user._id || user.id)) return false;
+        return true;
+      });
   }
 
   function attendanceFor(member, date) {
@@ -2341,6 +2355,29 @@ function TeamPanel({ user, teams, reload, setMessage }) {
     });
     setMessage("Salary and overtime hourly rate updated");
     reload();
+  }
+
+  async function moveMember(team, member) {
+    const targetAdminId = memberMoveForms[member._id];
+    if (!targetAdminId) {
+      setMessage("Select target admin");
+      return;
+    }
+
+    setMovingMemberId(member._id);
+    try {
+      const result = await apiRequest(`/teams/${team._id}/members/${member._id}/move`, {
+        method: "PATCH",
+        body: JSON.stringify({ targetAdminId })
+      });
+      setMemberMoveForms((current) => ({ ...current, [member._id]: "" }));
+      setMessage(`${member.name} moved to ${result.targetAdmin?.name || "selected admin"}`);
+      await reload();
+    } catch (error) {
+      setMessage(error.message);
+    } finally {
+      setMovingMemberId("");
+    }
   }
 
   async function updateAttendance(team, member, date, status) {
@@ -2591,9 +2628,35 @@ function TeamPanel({ user, teams, reload, setMessage }) {
                 )}
 
                 <div className="member-toolbar">
+                  {(user.role === "admin" || user.role === "super_admin") && (
+                    <div className="member-move-control">
+                      <select
+                        aria-label={`Move ${member.name} to admin`}
+                        value={memberMoveForms[member._id] || ""}
+                        onChange={(event) => setMemberMoveForms((current) => ({
+                          ...current,
+                          [member._id]: event.target.value
+                        }))}
+                      >
+                        <option value="">Move to admin</option>
+                        {targetAdminsFor(team).map((admin) => (
+                          <option key={admin._id} value={admin._id}>
+                            {admin.name} - {admin.assignedTeam?.name || "No site"}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        onClick={() => moveMember(team, member)}
+                        disabled={movingMemberId === member._id || !memberMoveForms[member._id]}
+                      >
+                        {movingMemberId === member._id ? "Moving..." : "Move"}
+                      </button>
+                    </div>
+                  )}
                   {user.role === "admin" && (
                     <div className="action-row compact member-actions">
-                      <button onClick={() => requestMemberUpdate(team, member, "delete_member")}>Delete</button>
+                      <button type="button" onClick={() => requestMemberUpdate(team, member, "delete_member")}>Delete</button>
                     </div>
                   )}
                 </div>

@@ -18,6 +18,13 @@ router.get("/", requireAuth, requirePermission("manage_users"), async (_req, res
   res.json(users);
 });
 
+router.get("/admins", requireAuth, requireRole("admin", "super_admin"), async (_req, res) => {
+  const users = await User.find({ role: "admin", status: "active" })
+    .select("name email role assignedTeam monthlySalary dailySalary status")
+    .populate("assignedTeam", "name siteLocation");
+  res.json(users);
+});
+
 router.post("/", requireAuth, requireRole("super_admin"), async (req, res, next) => {
   try {
     const user = await User.create({
