@@ -602,6 +602,8 @@ button:disabled {
 
 .dashboard-nav-row {
   display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
   justify-content: flex-end;
   margin-top: -8px;
 }
@@ -623,6 +625,92 @@ button:disabled {
   background: #1d2521;
   border-color: #1d2521;
   color: #fff8e8;
+}
+
+.team-legend {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #e7e7e7;
+  border-radius: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 12px 14px;
+}
+
+.team-legend-chip {
+  align-items: center;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  cursor: pointer;
+  display: inline-flex;
+  gap: 8px;
+  min-height: 34px;
+  padding: 7px 10px;
+}
+
+button.team-legend-chip {
+  font-family: inherit;
+}
+
+.team-legend-chip:hover,
+.team-legend-chip:focus-visible,
+.team-legend-chip.active {
+  box-shadow: 0 0 0 2px rgba(29, 37, 33, 0.16);
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.team-legend-chip strong {
+  font-size: 0.86rem;
+  line-height: 1;
+}
+
+.team-legend-chip svg {
+  flex: 0 0 auto;
+  stroke-width: 2.4;
+}
+
+.team-legend-chip.mason {
+  background: #fff0bf;
+  border-color: #e2c15d;
+  color: #6a4a00;
+}
+
+.team-legend-chip.centering {
+  background: #dff3df;
+  border-color: #92c99b;
+  color: #176232;
+}
+
+.team-legend-chip.tiles {
+  background: #e4f0ff;
+  border-color: #91b8e8;
+  color: #174d87;
+}
+
+.team-legend-chip.painting {
+  background: #ffe7f1;
+  border-color: #e5a2bd;
+  color: #8b3158;
+}
+
+.team-legend-chip.electrical {
+  background: #ffe8c9;
+  border-color: #edae64;
+  color: #7a4207;
+}
+
+.team-legend-chip.plumbing {
+  background: #dff7f6;
+  border-color: #84cdca;
+  color: #0e6462;
+}
+
+.team-legend-chip.other {
+  background: #eee9ff;
+  border-color: #b8a8e7;
+  color: #4c357e;
 }
 
 .admin-data-page {
@@ -750,6 +838,7 @@ button:disabled {
   border-radius: 9px;
   align-items: center;
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   gap: 16px;
   padding: 18px 20px;
@@ -1003,6 +1092,22 @@ button:disabled {
   gap: 14px;
 }
 
+.members-page-header {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  justify-content: space-between;
+}
+
+.members-page-header h2 {
+  margin-bottom: 4px;
+}
+
+.members-page .team-card {
+  gap: 18px;
+}
+
 .permission-list,
 .request-list,
 .team-section,
@@ -1021,6 +1126,12 @@ button:disabled {
 
 .user-form-panel {
   align-content: start;
+}
+
+.member-form-salary-row {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .created-team-list {
@@ -1204,6 +1315,17 @@ button:disabled {
   gap: 4px;
   min-width: 0;
   padding: 8px 10px;
+}
+
+.request-details div.changed {
+  background: #f2e7ff;
+  border-color: #a66be8;
+  box-shadow: inset 3px 0 0 #8e44d8;
+}
+
+.request-details div.changed span,
+.request-details div.changed strong {
+  color: #4c1f7a;
 }
 
 .request-details span {
@@ -1494,6 +1616,7 @@ button:disabled {
 .team-header {
   align-items: center;
   display: flex;
+  flex-wrap: wrap;
   gap: 16px;
   justify-content: space-between;
 }
@@ -1513,6 +1636,123 @@ button:disabled {
 .member-table {
   display: grid;
   gap: 14px;
+}
+
+.created-member-list {
+  border: 1px solid #e0d8c9;
+  border-radius: 8px;
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+}
+
+.created-member-head,
+.created-member-row {
+  align-items: center;
+  display: grid;
+  gap: 9px;
+  grid-template-columns: minmax(130px, 1fr) minmax(90px, 0.7fr) minmax(125px, 0.9fr) minmax(96px, 0.7fr) minmax(82px, 0.6fr) minmax(82px, 0.6fr) minmax(110px, 0.75fr) minmax(210px, 1.15fr) auto;
+}
+
+.created-member-list.without-member-actions .created-member-head,
+.created-member-list.without-member-actions .created-member-row {
+  grid-template-columns: minmax(130px, 1fr) minmax(90px, 0.7fr) minmax(125px, 0.9fr) minmax(96px, 0.7fr) minmax(82px, 0.6fr) minmax(82px, 0.6fr) minmax(110px, 0.75fr) minmax(240px, 1.25fr);
+}
+
+.created-member-head {
+  border-bottom: 1px solid #eadfce;
+  color: #6e7781;
+  font-size: 0.76rem;
+  font-weight: 800;
+  padding: 0 6px 8px;
+  text-transform: uppercase;
+}
+
+.created-member-row {
+  background: #fffdf8;
+  border: 1px solid #eadfce;
+  border-radius: 7px;
+  padding: 10px 12px;
+}
+
+.created-member-row strong {
+  color: #111820;
+}
+
+.created-member-name-cell {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.created-member-row span {
+  color: #5f574d;
+  font-size: 0.88rem;
+  min-width: 0;
+}
+
+.created-member-row input {
+  min-height: 34px;
+  min-width: 0;
+  width: 100%;
+}
+
+.created-member-move {
+  align-items: center;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(130px, 1fr) auto;
+  min-width: 0;
+}
+
+.created-member-move select {
+  min-height: 34px;
+  min-width: 0;
+  width: 100%;
+}
+
+.created-member-move button {
+  min-height: 34px;
+  padding: 7px 10px;
+  white-space: nowrap;
+}
+
+.request-status-text {
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.request-status-text.idle {
+  color: #6d665b;
+}
+
+.request-status-text.pending {
+  color: #6a4a00;
+}
+
+.request-status-text.approved {
+  color: #176232;
+}
+
+.request-status-text.rejected {
+  color: #8c2f1f;
+}
+
+.created-member-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.created-member-actions button {
+  min-height: 34px;
+  padding: 7px 11px;
+}
+
+.created-member-actions button:last-child {
+  background: #ffe1db;
+  color: #8c2f1f;
 }
 
 .member-row {
@@ -1547,7 +1787,7 @@ button:disabled {
   display: inline-flex;
   font-size: 1.05rem;
   font-weight: 900;
-  grid-row: span 4;
+  grid-row: span 5;
   height: 42px;
   justify-content: center;
   width: 42px;
@@ -1850,6 +2090,259 @@ button:disabled {
   color: #6a4a00;
 }
 
+.team-report-stack {
+  display: grid;
+  gap: 14px;
+}
+
+.team-report-card {
+  background: #fffdf8;
+  border: 1px solid #dacfbf;
+  border-radius: 8px;
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  padding: 14px;
+}
+
+.team-report-heading {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.team-report-heading h3 {
+  font-size: 1.15rem;
+  margin: 0;
+}
+
+.team-report-heading span {
+  color: #6d665b;
+  font-size: 0.78rem;
+}
+
+.team-report-heading strong {
+  background: #f1e4d0;
+  border-radius: 6px;
+  font-size: 0.88rem;
+  padding: 7px 10px;
+}
+
+.team-report-table-wrap {
+  overflow-x: auto;
+  width: 100%;
+}
+
+.team-report-table {
+  border-collapse: separate;
+  border-spacing: 0;
+  min-width: 1080px;
+  width: 100%;
+}
+
+.team-report-table th,
+.team-report-table td {
+  border-bottom: 1px solid #eadfce;
+  padding: 9px 10px;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.team-report-table th {
+  background: #f6efe3;
+  color: #5f574d;
+  font-size: 0.74rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.team-report-table thead tr:first-child th {
+  border-top: 1px solid #eadfce;
+}
+
+.team-report-table th:first-child,
+.team-report-table td:first-child {
+  border-left: 1px solid #eadfce;
+}
+
+.team-report-table th:last-child,
+.team-report-table td:last-child {
+  border-right: 1px solid #eadfce;
+}
+
+.team-report-table tbody tr:nth-child(even) td {
+  background: #fffaf2;
+}
+
+.team-report-table .team-report-subheading td {
+  background: #efe7d9;
+  border-top: 1px solid #d9cbb8;
+  color: #30291f;
+  font-size: 0.86rem;
+  font-weight: 900;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.team-report-table .team-report-subheading + tr td {
+  border-top: 0;
+}
+
+.team-report-table td strong,
+.team-report-table td span,
+.team-report-table td small {
+  display: block;
+}
+
+.team-report-table td span {
+  color: #5f574d;
+  font-size: 0.84rem;
+}
+
+.team-report-table td small {
+  color: #7a6f61;
+  font-size: 0.76rem;
+  margin-top: 2px;
+}
+
+.attendance-select.compact,
+.attendance-pill.compact {
+  font-size: 0.92rem;
+  min-height: 32px;
+  min-width: 76px;
+  padding: 6px 10px;
+  text-align: center;
+}
+
+.report-ot-form {
+  align-items: center;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 70px minmax(130px, 1fr) auto;
+}
+
+.report-ot-form input {
+  min-height: 32px;
+  padding: 6px 8px;
+}
+
+.report-inline-input {
+  min-height: 34px;
+  min-width: 0;
+  padding: 7px 9px;
+  width: 100%;
+}
+
+.report-ot-form button,
+.report-salary-controls button,
+.team-report-table td button {
+  align-items: center;
+  background: #efe7d9;
+  border: 0;
+  border-radius: 6px;
+  color: #30291f;
+  display: inline-flex;
+  gap: 6px;
+  justify-content: center;
+  min-height: 32px;
+  padding: 6px 10px;
+  white-space: nowrap;
+}
+
+.report-ot-text {
+  display: grid;
+  gap: 2px;
+}
+
+.report-salary-controls {
+  align-items: center;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 82px 82px auto;
+}
+
+.report-salary-controls input {
+  min-height: 32px;
+  min-width: 0;
+  padding: 6px 8px;
+  width: 100%;
+}
+
+.other-team-report {
+  border-top: 4px solid #111;
+  display: grid;
+  gap: 0;
+  overflow-x: auto;
+  padding-top: 20px;
+}
+
+.other-team-date {
+  color: #30291f;
+  font-size: 0.82rem;
+  font-weight: 900;
+  padding: 0 28px 12px;
+  text-transform: uppercase;
+}
+
+.other-team-head,
+.other-team-row {
+  align-items: start;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(130px, 1.1fr) minmax(120px, 0.9fr) minmax(95px, 0.75fr) minmax(135px, 0.95fr) minmax(150px, 1fr) minmax(130px, 0.95fr) minmax(130px, 0.95fr) minmax(130px, 0.95fr) minmax(115px, 0.75fr);
+  min-width: 1340px;
+}
+
+.other-team-head {
+  color: #111820;
+  font-size: 0.9rem;
+  padding: 10px 28px;
+}
+
+.other-team-row {
+  border-bottom: 1px solid #f0e6d7;
+  padding: 12px 28px 22px;
+}
+
+.other-team-row strong,
+.other-team-row span {
+  color: #111820;
+}
+
+.other-team-row > input {
+  min-height: 34px;
+  min-width: 0;
+  padding: 7px 9px;
+  width: 100%;
+}
+
+.other-team-row small {
+  color: #5f574d;
+  display: block;
+  font-size: 0.78rem;
+  margin-top: 4px;
+}
+
+.other-team-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.other-team-actions button {
+  background: #efe7d9;
+  border: 1px solid #e0d4c3;
+  border-radius: 6px;
+  color: #111820;
+  min-height: 30px;
+  padding: 5px 10px;
+}
+
+.other-team-actions button:hover {
+  background: #e6dac8;
+}
+
 body {
   background: #ffffff;
 }
@@ -1912,6 +2405,19 @@ body {
   display: block;
   font-size: 2.05rem;
   line-height: 1;
+}
+
+.stat-card-action {
+  cursor: pointer;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+}
+
+.stat-card-action:hover,
+.stat-card-action:focus-visible {
+  border-color: #e39a08;
+  box-shadow: 0 12px 30px rgba(227, 154, 8, 0.14);
+  outline: none;
+  transform: translateY(-1px);
 }
 
 .stat-icon,
@@ -2583,6 +3089,7 @@ body {
   .selected-admin-metrics,
   .member-team-transfer-card,
   .member-team-transfer-grid,
+  .created-member-row,
   .admin-data-grid,
   .admin-data-row,
   .admin-attendance-head,
@@ -2592,6 +3099,10 @@ body {
   }
 
   .admin-data-grid {
+    display: none;
+  }
+
+  .created-member-head {
     display: none;
   }
 
@@ -2619,6 +3130,10 @@ body {
   .team-transfer-row,
   .admin-select-item,
   .member-move-control,
+  .created-member-move,
+  .member-form-salary-row,
+  .report-ot-form,
+  .report-salary-controls,
   .attendance-grid {
     grid-template-columns: 1fr;
   }

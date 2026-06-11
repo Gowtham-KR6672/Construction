@@ -20,7 +20,7 @@ router.get("/", requireAuth, requirePermission("manage_users"), async (_req, res
 
 router.get("/admins", requireAuth, requireRole("admin", "super_admin"), async (_req, res) => {
   const users = await User.find({ role: "admin", status: "active" })
-    .select("name email role assignedTeam monthlySalary dailySalary status")
+    .select("name email position role assignedTeam monthlySalary dailySalary status")
     .populate("assignedTeam", "name siteLocation");
   res.json(users);
 });
@@ -59,7 +59,7 @@ router.patch("/:id/password", requireAuth, requireRole("super_admin"), async (re
 
 router.patch("/:id", requireAuth, requireRole("super_admin"), async (req, res, next) => {
   try {
-    const allowed = ["name", "email", "role", "permissions", "assignedTeam", "monthlySalary", "status"];
+    const allowed = ["name", "email", "position", "role", "permissions", "assignedTeam", "monthlySalary", "status"];
     const updates = Object.fromEntries(Object.entries(req.body).filter(([key]) => allowed.includes(key)));
 
     const user = await User.findById(req.params.id);

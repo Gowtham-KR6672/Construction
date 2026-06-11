@@ -6,12 +6,16 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  CircleHelp,
   ClipboardCheck,
   Clock,
   Building2,
   CalendarDays,
+  Droplets,
   EyeOff,
   FileSpreadsheet,
+  Grid3X3,
+  Hammer,
   HardHat,
   IndianRupee,
   Lock,
@@ -20,12 +24,14 @@ import {
   MapPin,
   LayoutGrid,
   Download,
+  Paintbrush,
   Plus,
   RefreshCw,
   ShieldCheck,
   Smartphone,
   UserPlus,
   Users,
+  Zap,
   XCircle
 } from "lucide-react";
 import constructionLoadingAnimation from "./assets/construction-loading.json";
@@ -42,7 +48,25 @@ const MEMBER_TEAM_OPTIONS = [
   "Plumbing Team",
   "Other"
 ];
-const MEMBER_TEAM_OPTIONS_REQUIRING_DETAIL = new Set(["Mason Team", "Other"]);
+const MEMBER_TEAM_REPORT_ORDER = [
+  "Mason Team",
+  "Tiles Team",
+  "Centering Team",
+  "Painting Team",
+  "Electrical Team",
+  "Plumbing Team",
+  "Other"
+];
+const MEMBER_TEAM_LEGEND = [
+  { name: "Mason Team", short: "Mason", className: "mason", icon: Hammer },
+  { name: "Centering Team", short: "Centering", className: "centering", icon: Building2 },
+  { name: "Tiles Team", short: "Tiles", className: "tiles", icon: Grid3X3 },
+  { name: "Painting Team", short: "Painting", className: "painting", icon: Paintbrush },
+  { name: "Electrical Team", short: "Electrical", className: "electrical", icon: Zap },
+  { name: "Plumbing Team", short: "Plumbing", className: "plumbing", icon: Droplets },
+  { name: "Other", short: "Other", className: "other", icon: CircleHelp }
+];
+const MEMBER_TEAM_OPTIONS_REQUIRING_DETAIL = new Set(MEMBER_TEAM_OPTIONS);
 const ADMIN_ATTENDANCE_OPTIONS = ["Present", "Absent", "0.5 days leave"];
 
 function isIosDevice() {
@@ -151,7 +175,7 @@ function memberTotal(member) {
 }
 
 function teamPayrollTotal(team) {
-  return team.members.reduce((total, member) => total + memberTotal(member), 0);
+  return team.members.reduce((total, member) => total + Number(member.fixedSalary || 0), 0);
 }
 
 function splitTeamName(name = "") {
@@ -160,6 +184,40 @@ function splitTeamName(name = "") {
     mainTeam: mainTeam.trim(),
     subTeam: subTeamParts.join(" - ").trim()
   };
+}
+
+function memberTeamBase(trade = "") {
+  const cleanTrade = String(trade || "").trim();
+  const matchedTeam = MEMBER_TEAM_OPTIONS.find((teamName) => cleanTrade === teamName || cleanTrade.startsWith(`${teamName} - `));
+  return matchedTeam || splitTeamName(cleanTrade).mainTeam || "Other";
+}
+
+function memberSubTeamName(trade = "") {
+  const cleanTrade = String(trade || "").trim();
+  const baseTeam = memberTeamBase(cleanTrade);
+  const detail = cleanTrade.startsWith(`${baseTeam} - `)
+    ? cleanTrade.slice(baseTeam.length + 3).trim()
+    : "";
+  return detail || "General";
+}
+
+function memberSubTeamKey(trade = "") {
+  return memberSubTeamName(trade)
+    .replace(/\s+team$/i, "")
+    .trim()
+    .toLowerCase() || "general";
+}
+
+function formatSubTeamHeading(value = "") {
+  const cleanValue = String(value || "General").replace(/\s+team$/i, "").trim() || "General";
+  return cleanValue
+    .split(/\s+/)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
+}
+
+function usesSupervisorLabourReport(teamName = "") {
+  return teamName !== "Mason Team" && teamName !== "Tiles Team";
 }
 
 function mainTeamSelectionId(mainTeam) {
@@ -629,11 +687,15 @@ function Dashboard({ user, logout }) {
   const [selectedAdminControlId, setSelectedAdminControlId] = useState("");
   const [expandedTeamNames, setExpandedTeamNames] = useState({});
   const [showAdminDataControl, setShowAdminDataControl] = useState(false);
+  const [showMembersPage, setShowMembersPage] = useState(false);
+  const [showOverallAttendance, setShowOverallAttendance] = useState(false);
+  const [selectedReportTrade, setSelectedReportTrade] = useState("");
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const canManageUsers = user.role === "super_admin" || user.permissions?.includes("manage_users");
   const canViewApprovals = user.role === "super_admin" || user.permissions?.includes("view_approvals");
   const canLoadAdminTargets = user.role === "admin" || canManageUsers;
+  const canLoadOwnApprovals = user.role === "admin";
   const assignedTeamId = user.assignedTeam?._id || user.assignedTeam || "";
   const isAdmin = user.role === "admin";
 
@@ -647,7 +709,7 @@ function Dashboard({ user, logout }) {
     try {
       const [teamData, approvalData, userData] = await Promise.all([
         apiRequest("/teams"),
-        canViewApprovals ? apiRequest("/approvals") : Promise.resolve([]),
+        canViewApprovals ? apiRequest("/approvals") : canLoadOwnApprovals ? apiRequest("/approvals/mine") : Promise.resolve([]),
         canManageUsers ? apiRequest("/users") : canLoadAdminTargets ? apiRequest("/users/admins") : Promise.resolve([])
       ]);
       setTeams(teamData);
@@ -876,7 +938,23 @@ function Dashboard({ user, logout }) {
                 </article>
               ))
               : stats.map((stat) => (
-                <article className="stat-card" key={stat.label}>
+                <article
+                  className={`stat-card ${stat.label === "Members" ? "stat-card-action" : ""}`}
+                  key={stat.label}
+                  role={stat.label === "Members" ? "button" : undefined}
+                  tabIndex={stat.label === "Members" ? 0 : undefined}
+                  onClick={stat.label === "Members" ? () => {
+                    setShowAdminDataControl(false);
+                    setShowMembersPage(true);
+                  } : undefined}
+                  onKeyDown={stat.label === "Members" ? (event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      setShowAdminDataControl(false);
+                      setShowMembersPage(true);
+                    }
+                  } : undefined}
+                >
                   <span className="stat-icon">
                     <stat.icon size={28} />
                   </span>
@@ -889,22 +967,64 @@ function Dashboard({ user, logout }) {
           </div>
         )}
 
-        {user.role === "super_admin" && !isInitialLoading && !showAdminDataControl && (
-          <div className="dashboard-nav-row">
-            <button
-              className={`dashboard-nav-button ${showAdminDataControl ? "active" : ""}`}
-              type="button"
-              onClick={() => setShowAdminDataControl(true)}
-            >
-              <Users size={18} />
-              Admin Data Control
-            </button>
+        {!showAdminDataControl && !isInitialLoading && (
+          <div className="dashboard-nav-row" style={{ alignItems: "center", gap: "12px", display: "flex", flexWrap: "wrap", justifyContent: "space-between" }}>
+            <TeamLegend selectedTrade={selectedReportTrade} onSelectTrade={setSelectedReportTrade} />
+            <div style={{ display: "flex", gap: "12px", marginLeft: "auto" }}>
+              {(user.role === "admin" || user.role === "super_admin") && (
+                <button
+                  className={`dashboard-nav-button ${showOverallAttendance ? "active" : ""}`}
+                  type="button"
+                  onClick={() => {
+                    setShowOverallAttendance(!showOverallAttendance);
+                    setShowMembersPage(false);
+                    setShowAdminDataControl(false);
+                  }}
+                >
+                  <CalendarDays size={18} />
+                  Overall Attendance
+                </button>
+              )}
+              {user.role === "super_admin" && (
+                <button
+                  className={`dashboard-nav-button ${showAdminDataControl ? "active" : ""}`}
+                  type="button"
+                  onClick={() => {
+                    setShowMembersPage(false);
+                    setShowOverallAttendance(false);
+                    setShowAdminDataControl(true);
+                  }}
+                >
+                  <Users size={18} />
+                  Admin Data Control
+                </button>
+              )}
+            </div>
           </div>
         )}
 
         {message && <p className="notice">{message}</p>}
 
-        {user.role === "super_admin" && showAdminDataControl ? (
+        {showMembersPage ? (
+          <TeamPanel
+            user={user}
+            users={users}
+            teams={visibleTeams}
+            approvals={visibleApprovals}
+            reload={refreshData}
+            setMessage={setMessage}
+            membersOnly
+            onBack={() => setShowMembersPage(false)}
+            selectedReportTrade={selectedReportTrade}
+          />
+        ) : showOverallAttendance ? (
+          <OverallAttendancePanel
+            user={user}
+            teams={visibleTeams}
+            selectedTrade={selectedReportTrade}
+            onBack={() => setShowOverallAttendance(false)}
+          />
+        ) : user.role === "super_admin" && showAdminDataControl ? (
           <AdminDataControlPage
             users={users}
             teams={teams}
@@ -927,13 +1047,31 @@ function Dashboard({ user, logout }) {
 
                 {user.role === "super_admin" && <ReportsPanel teams={visibleTeams} />}
 
-                <TeamPanel user={user} users={users} teams={visibleTeams} reload={refreshData} setMessage={setMessage} />
+                <TeamPanel user={user} users={users} teams={visibleTeams} approvals={visibleApprovals} reload={refreshData} setMessage={setMessage} selectedReportTrade={selectedReportTrade} />
               </>
             )}
           </>
         )}
       </section>
     </main>
+  );
+}
+
+function TeamLegend({ selectedTrade = "", onSelectTrade }) {
+  return (
+    <section className="team-legend" aria-label="Team list">
+      {MEMBER_TEAM_LEGEND.map((team) => (
+        <button
+          className={`team-legend-chip ${team.className} ${selectedTrade === team.name ? "active" : ""}`}
+          key={team.name}
+          type="button"
+          onClick={() => onSelectTrade(selectedTrade === team.name ? "" : team.name)}
+        >
+          <team.icon size={15} />
+          <strong>{team.short}</strong>
+        </button>
+      ))}
+    </section>
   );
 }
 
@@ -981,9 +1119,10 @@ function AdminDataControlPage({ users, teams, selectedAdminId, reload, setMessag
     if (!selectedAdmin) return;
 
     const rows = [
-      ["Admin", "Month", "Monthly salary", "Daily salary", "Total earnings", "Present days", "0.5 days leave", "Absent days"],
+      ["Admin", "Position", "Month", "Monthly salary", "Daily salary", "Total earnings", "Present days", "0.5 days leave", "Absent days"],
       [
         selectedAdmin.name,
+        selectedAdmin.position || "",
         currentMonthKey,
         selectedAdmin.monthlySalary || 0,
         selectedAdmin.dailySalary || 0,
@@ -1019,6 +1158,7 @@ function AdminDataControlPage({ users, teams, selectedAdminId, reload, setMessag
           ["Admin details"],
           ["Name", admin.name],
           ["Email", admin.email],
+          ["Position", admin.position || ""],
           ["Project", admin.assignedTeam?.name || "No site assigned"],
           ["Site location", admin.assignedTeam?.siteLocation || ""],
           ["Month", currentMonthKey],
@@ -1050,10 +1190,11 @@ function AdminDataControlPage({ users, teams, selectedAdminId, reload, setMessag
       ["All admin details"],
       ["Month", currentMonthKey],
       [],
-      ["Name", "Email", "Project", "Site location", "Monthly salary", "Daily salary", "Total earnings", "Present days", "0.5 days leave", "Absent days"],
+      ["Name", "Email", "Position", "Project", "Site location", "Monthly salary", "Daily salary", "Total earnings", "Present days", "0.5 days leave", "Absent days"],
       ...adminSheets.map(({ admin, stats }) => [
         admin.name,
         admin.email,
+        admin.position || "",
         admin.assignedTeam?.name || "No site assigned",
         admin.assignedTeam?.siteLocation || "",
         Number(admin.monthlySalary || 0),
@@ -1506,13 +1647,14 @@ function SuperAdminPanel({ users, teams, approvals, reload, setMessage }) {
     name: "",
     email: "",
     password: "",
+    position: "",
     assignedTeam: "",
     monthlySalary: ""
   });
   const [newProject, setNewProject] = useState({ name: "", address: "" });
   const [passwordForms, setPasswordForms] = useState({});
   const [editingAdminId, setEditingAdminId] = useState(null);
-  const [adminEditForm, setAdminEditForm] = useState({ name: "", email: "", assignedTeam: "", monthlySalary: "" });
+  const [adminEditForm, setAdminEditForm] = useState({ name: "", email: "", position: "", assignedTeam: "", monthlySalary: "" });
   const [editingTeamId, setEditingTeamId] = useState(null);
   const [teamEditForm, setTeamEditForm] = useState({ name: "", siteLocation: "" });
   const [teamTransferForms, setTeamTransferForms] = useState({});
@@ -1543,6 +1685,7 @@ function SuperAdminPanel({ users, teams, approvals, reload, setMessage }) {
       name: newUser.name,
       email: newUser.email,
       password: newUser.password,
+      position: newUser.position,
       role: "admin",
       permissions: [],
       assignedTeam: newUser.assignedTeam,
@@ -1554,7 +1697,7 @@ function SuperAdminPanel({ users, teams, approvals, reload, setMessage }) {
       body: JSON.stringify(payload)
     });
 
-    setNewUser({ name: "", email: "", password: "", assignedTeam: "", monthlySalary: "" });
+    setNewUser({ name: "", email: "", password: "", position: "", assignedTeam: "", monthlySalary: "" });
     setMessage("Admin login created successfully");
     reload();
   }
@@ -1593,6 +1736,7 @@ function SuperAdminPanel({ users, teams, approvals, reload, setMessage }) {
     setAdminEditForm({
       name: item.name,
       email: item.email,
+      position: item.position || "",
       assignedTeam: item.assignedTeam?._id || item.assignedTeam || "",
       monthlySalary: item.monthlySalary || ""
     });
@@ -1664,11 +1808,43 @@ function SuperAdminPanel({ users, teams, approvals, reload, setMessage }) {
 
   function requestDetails(request) {
     const detailSource = request.type === "delete_member" ? request.currentMember : request.payload;
+
+    const currentMember = request.currentMember || {};
+    const normalized = (value) => String(value ?? "").trim();
+    const changedFields = new Set(
+      request.type === "update_member"
+        ? [
+          ["Name", "name"],
+          ["Position", "position"],
+          ["Team", "trade"],
+          ["Phone", "phone"],
+          ["Site", "site"],
+          ["Current salary", "fixedSalary"],
+          ["OT salary", "overtimeHourlyRate"],
+          ["Labour count", "labourCount"],
+          ["Labour salary", "labourSalary"],
+          ["Labour entries", "labourEntries"],
+          ["Status", "status"]
+        ]
+          .filter(([, key]) => normalized(request.payload?.[key]) !== normalized(currentMember?.[key]))
+          .map(([label]) => label)
+        : []
+    );
     const rows = [
       ["Name", detailSource?.name],
+      ["Position", detailSource?.position],
       ["Team", detailSource?.trade],
       ["Phone", detailSource?.phone],
       ["Site", detailSource?.site],
+      ["Current salary", detailSource?.fixedSalary ? money(detailSource.fixedSalary) : ""],
+      ["OT salary", detailSource?.overtimeHourlyRate ? `${money(detailSource.overtimeHourlyRate)}/hr` : ""],
+      ["Labour count", detailSource?.labourCount],
+      ["Labour salary", detailSource?.labourSalary ? money(detailSource.labourSalary) : ""],
+      ["Labour entries", detailSource?.labourEntries?.length
+        ? detailSource.labourEntries
+          .map((entry) => `${shortDateLabel(normalizeDateKey(entry.date))}: ${entry.labourCount || 0} x ${money(entry.labourSalary || 0)}`)
+          .join(", ")
+        : ""],
       ["Team", request.team?.name],
       ["Location", request.team?.siteLocation],
       ["Status", detailSource?.status]
@@ -1681,7 +1857,7 @@ function SuperAdminPanel({ users, teams, approvals, reload, setMessage }) {
     return (
       <div className="request-details">
         {rows.map(([label, value], index) => (
-          <div key={`${label}-${index}`}>
+          <div className={changedFields.has(label) ? "changed" : ""} key={`${label}-${index}`}>
             <span>{label}</span>
             <strong>{value}</strong>
           </div>
@@ -1725,6 +1901,13 @@ function SuperAdminPanel({ users, teams, approvals, reload, setMessage }) {
               required
             />
             <EyeOff size={16} />
+          </IconField>
+          <IconField icon={Users}>
+            <input
+              placeholder="Position"
+              value={newUser.position}
+              onChange={(event) => setNewUser({ ...newUser, position: event.target.value })}
+            />
           </IconField>
           <IconField icon={Building2}>
             <select
@@ -1882,6 +2065,7 @@ function SuperAdminPanel({ users, teams, approvals, reload, setMessage }) {
                 <>
                   <input value={adminEditForm.name} onChange={(event) => setAdminEditForm({ ...adminEditForm, name: event.target.value })} />
                   <input type="email" value={adminEditForm.email} onChange={(event) => setAdminEditForm({ ...adminEditForm, email: event.target.value })} />
+                  <input placeholder="Position" value={adminEditForm.position} onChange={(event) => setAdminEditForm({ ...adminEditForm, position: event.target.value })} />
                   <select value={adminEditForm.assignedTeam} onChange={(event) => setAdminEditForm({ ...adminEditForm, assignedTeam: event.target.value })}>
                     <option value="">Assign project</option>
                     {teams.map((team) => (
@@ -1912,6 +2096,7 @@ function SuperAdminPanel({ users, teams, approvals, reload, setMessage }) {
                   <div>
                     <strong>{item.name}</strong>
                     <span>{item.email} - {item.assignedTeam?.name || "No site assigned"}</span>
+                    <span>Position: {item.position || "Not set"}</span>
                     <span>Monthly: {money(item.monthlySalary || 0)} - Daily: {money(item.dailySalary || 0)}</span>
                   </div>
                   <input
@@ -2188,12 +2373,254 @@ function ReportsPanel({ teams }) {
   );
 }
 
-function TeamPanel({ user, users = [], teams, reload, setMessage }) {
-  const [memberForm, setMemberForm] = useState({ name: "", trade: "", teamDetail: "", phone: "", site: "" });
+function OverallAttendancePanel({ user, teams, selectedTrade, onBack }) {
+  const currentWeekDays = useMemo(() => weekDates(), []);
+  const [dateRange, setDateRange] = useState({
+    from: currentWeekDays[0],
+    to: currentWeekDays[currentWeekDays.length - 1]
+  });
+
+  const dates = useMemo(() => {
+    if (!dateRange.from || !dateRange.to) return [];
+    let current = new Date(`${dateRange.from}T00:00:00`);
+    const end = new Date(`${dateRange.to}T00:00:00`);
+    const list = [];
+    while (current <= end && list.length < 31) {
+      list.push(dateKey(current));
+      current.setDate(current.getDate() + 1);
+    }
+    return list;
+  }, [dateRange.from, dateRange.to]);
+
+  const filteredTeams = useMemo(() => {
+    return teams.map((team) => {
+      const filteredMembers = selectedTrade
+        ? team.members.filter((m) => memberTeamBase(m.trade) === selectedTrade)
+        : team.members;
+      return { ...team, members: filteredMembers };
+    }).filter((team) => team.members.length > 0);
+  }, [teams, selectedTrade]);
+
+  const teamGroups = useMemo(() => {
+    const groups = {};
+    for (const team of filteredTeams) {
+      for (const member of team.members) {
+        const tradeName = memberTeamBase(member.trade);
+        if (!groups[tradeName]) {
+          groups[tradeName] = { teamName: tradeName, sections: [], members: [] };
+        }
+        groups[tradeName].members.push(member);
+      }
+    }
+    return Object.values(groups).map((group) => {
+      const byContractor = {};
+      for (const member of group.members) {
+        const contractor = member.teamDetail || "General";
+        if (!byContractor[contractor]) byContractor[contractor] = [];
+        byContractor[contractor].push(member);
+      }
+      let serialStart = 1;
+      const sections = Object.entries(byContractor).map(([sectionName, members]) => {
+        const section = { sectionName, members, serialStart };
+        serialStart += members.length;
+        return section;
+      });
+      return { ...group, sections };
+    });
+  }, [filteredTeams]);
+
+  function attendanceFor(member, date) {
+    return member.attendanceEntries?.find((entry) => normalizeDateKey(entry.date) === date)?.status || "absent";
+  }
+
+  function downloadReport() {
+    const rows = [];
+    rows.push(["Overall Attendance Report"]);
+    rows.push(["From", dateRange.from, "To", dateRange.to]);
+    rows.push([]);
+
+    teamGroups.forEach((group) => {
+      rows.push([`Team: ${group.teamName}`]);
+      const headerRow = ["S.No", "Name", "Position", "Trade", "Current Salary", "Total OT Salary", "Total Salary", ...dates.map(shortDateLabel)];
+      rows.push(headerRow);
+
+      group.sections.forEach((section) => {
+        rows.push([`Contractor: ${section.sectionName}`]);
+        section.members.forEach((member, index) => {
+          const row = [
+            section.serialStart + index,
+            member.name,
+            member.position || "",
+            member.trade || "",
+            member.fixedSalary || 0,
+            overtimeTotal(member),
+            Number(member.fixedSalary || 0) + overtimeTotal(member),
+          ];
+          dates.forEach((date) => {
+            const status = attendanceFor(member, date);
+            const label = status === "present" ? "P" : status === "absent" ? "A" : status === "half" ? "0.5" : "-";
+            row.push(label);
+          });
+          rows.push(row);
+        });
+      });
+
+      let totalTeamPresent = 0;
+      let totalTeamAbsent = 0;
+      let totalTeamHalf = 0;
+      
+      const summaryRows = [];
+      summaryRows.push(["", "Name", "Present ( P )", "Absent ( A )", "0.5 Days ( 0.5 )"]);
+
+      let isFirstSummaryRow = true;
+
+      group.sections.forEach((section) => {
+        section.members.forEach((member) => {
+          let presentCount = 0;
+          let absentCount = 0;
+          let halfCount = 0;
+
+          dates.forEach((date) => {
+            const status = attendanceFor(member, date);
+            if (status === "present") presentCount++;
+            else if (status === "absent") absentCount++;
+            else if (status === "half") halfCount++;
+          });
+
+          totalTeamPresent += presentCount;
+          totalTeamAbsent += absentCount;
+          totalTeamHalf += halfCount;
+
+          summaryRows.push([
+            isFirstSummaryRow ? "Total" : "",
+            member.name,
+            presentCount,
+            absentCount,
+            halfCount
+          ]);
+          isFirstSummaryRow = false;
+        });
+      });
+
+      summaryRows.push(["", "", totalTeamPresent, totalTeamAbsent, totalTeamHalf]);
+
+      rows.push([]);
+      rows.push([]);
+      rows.push(...summaryRows);
+      rows.push([]);
+    });
+
+    downloadCsv(`overall-attendance-${dateRange.from}-to-${dateRange.to}.csv`, rows);
+  }
+
+  return (
+    <section className="panel overall-attendance-panel">
+      <div className="members-page-header">
+        <div>
+          <h2>Overall Attendance Report</h2>
+          <p className="muted">View multi-day attendance records for team members.</p>
+        </div>
+        <button className="ghost-button compact" type="button" onClick={onBack}>
+          <ChevronLeft size={16} />
+          Back to dashboard
+        </button>
+      </div>
+
+      <div className="admin-attendance-control-grid" style={{ marginBottom: "20px", display: "flex", alignItems: "flex-end", flexWrap: "wrap", gap: "16px" }}>
+        <label>
+          From
+          <input type="date" value={dateRange.from} onChange={(e) => setDateRange({ ...dateRange, from: e.target.value })} />
+        </label>
+        <label>
+          To
+          <input type="date" value={dateRange.to} onChange={(e) => setDateRange({ ...dateRange, to: e.target.value })} />
+        </label>
+        {(user?.role === "admin" || user?.role === "super_admin") && (
+          <button type="button" className="primary-button" onClick={downloadReport} style={{ height: "38px" }}>
+            <Download size={16} style={{ marginRight: "8px" }} />
+            Download
+          </button>
+        )}
+      </div>
+
+      {teamGroups.map((group) => (
+        <section className="team-report-card" key={group.teamName}>
+          <div className="team-report-heading">
+            <div>
+              <h3>{group.teamName}</h3>
+              <span>{dates.length} days report</span>
+            </div>
+            <strong>{group.members.length} member{group.members.length === 1 ? "" : "s"}</strong>
+          </div>
+          <div className="team-report-table-wrap">
+            <table className="team-report-table">
+              <thead>
+                <tr>
+                  <th rowSpan="2">S.No</th>
+                  <th rowSpan="2">Name</th>
+                  <th rowSpan="2">Current Salary</th>
+                  <th rowSpan="2">Total OT Salary</th>
+                  <th rowSpan="2">Total Salary</th>
+                  <th colSpan={dates.length}>Attendance ({shortDateLabel(dateRange.from)} - {shortDateLabel(dateRange.to)})</th>
+                </tr>
+                <tr>
+                  {dates.map((date) => (
+                    <th key={date}>{shortDateLabel(date)}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {group.sections.map((section) => (
+                  <React.Fragment key={`${group.teamName}-${section.sectionName}`}>
+                    <tr className="team-report-subheading">
+                      <td colSpan={5 + dates.length}>{section.sectionName}</td>
+                    </tr>
+                    {section.members.map((member, index) => (
+                      <tr key={`report-${member._id}`}>
+                        <td>{section.serialStart + index}</td>
+                        <td>
+                          <strong>{member.name}</strong>
+                          <span>{member.position || "No position"}</span>
+                          <small>{member.trade}</small>
+                        </td>
+                        <td>{money(member.fixedSalary)}</td>
+                        <td>{money(overtimeTotal(member))}</td>
+                        <td>{money(Number(member.fixedSalary || 0) + overtimeTotal(member))}</td>
+                        {dates.map((date) => {
+                          const status = attendanceFor(member, date);
+                          return (
+                            <td key={date}>
+                          <strong className={`attendance-pill compact ${status}`}>
+                            {status === "present" ? "P" : status === "absent" ? "A" : status === "half" ? "0.5" : "-"}
+                          </strong>
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </React.Fragment>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      ))}
+      {!teamGroups.length && (
+        <p className="muted">No members found for the selected team.</p>
+      )}
+    </section>
+  );
+}
+
+function TeamPanel({ user, users = [], teams, approvals = [], reload, setMessage, membersOnly = false, onBack, selectedReportTrade = "" }) {
+  const initialMemberForm = { name: "", position: "", trade: "", teamDetail: "", phone: "", site: "", fixedSalary: "", overtimeHourlyRate: "" };
+  const [memberForm, setMemberForm] = useState(initialMemberForm);
   const [selectedMemberTeamId, setSelectedMemberTeamId] = useState("");
   const [salaryForms, setSalaryForms] = useState({});
   const [dailyOvertimeForms, setDailyOvertimeForms] = useState({});
+  const [editingOvertimeForms, setEditingOvertimeForms] = useState({});
   const [memberMoveForms, setMemberMoveForms] = useState({});
+  const [editingMemberForms, setEditingMemberForms] = useState({});
   const [movingMemberId, setMovingMemberId] = useState("");
   const [adminAttendance, setAdminAttendance] = useState({ monthlySalary: user.monthlySalary || 0, totalEarnings: 0, entries: [] });
   const [adminAttendanceForms, setAdminAttendanceForms] = useState({});
@@ -2238,7 +2665,11 @@ function TeamPanel({ user, users = [], teams, reload, setMessage }) {
   }
 
   function dailyOvertimeFormFor(member, date) {
-    return dailyOvertimeForms[`${member._id}-${date}`] || { hours: "", note: "" };
+    if (dailyOvertimeForms[`${member._id}-${date}`]) {
+      return dailyOvertimeForms[`${member._id}-${date}`];
+    }
+    const existing = (member.overtimeEntries || []).find(e => normalizeDateKey(e.date) === date);
+    return { hours: existing?.hours || "", note: existing?.note || "" };
   }
 
   function targetAdminsFor(team) {
@@ -2284,6 +2715,94 @@ function TeamPanel({ user, users = [], teams, reload, setMessage }) {
       .join(", ");
   }
 
+  function labourEntryForDate(member, date) {
+    return (member.labourEntries || []).find((entry) => normalizeDateKey(entry.date) === date) || {
+      date,
+      labourCount: 0,
+      labourSalary: member.labourSalary || 0
+    };
+  }
+
+  function labourFormForDate(member, date) {
+    const editForm = memberEditFormFor(member, teams.find((item) => item._id === (member.team?._id || member.team)) || {});
+    const entry = (editForm.labourEntries || []).find((item) => normalizeDateKey(item.date) === date);
+    return entry || labourEntryForDate(member, date);
+  }
+
+  function changeLabourEntry(member, date, key, value) {
+    setEditingMemberForms((current) => {
+      const form = current[member._id] || memberEditFormFor(member, teams.find((item) => item._id === (member.team?._id || member.team)) || {});
+      const entries = [...(form.labourEntries || [])];
+      const entryIndex = entries.findIndex((entry) => normalizeDateKey(entry.date) === date);
+      const currentEntry = entryIndex >= 0 ? entries[entryIndex] : labourEntryForDate(member, date);
+      const nextEntry = { ...currentEntry, date, [key]: value };
+
+      if (entryIndex >= 0) {
+        entries[entryIndex] = nextEntry;
+      } else {
+        entries.push(nextEntry);
+      }
+
+      return {
+        ...current,
+        [member._id]: {
+          ...form,
+          labourEntries: entries
+        }
+      };
+    });
+  }
+
+  function attendanceShortLabel(status) {
+    if (status === "present") return "P";
+    if (status === "half") return "0.5";
+    return "A";
+  }
+
+  function groupedMemberReports(team) {
+    const groups = MEMBER_TEAM_REPORT_ORDER.map((teamName) => ({
+      teamName,
+      members: team.members.filter((member) => memberTeamBase(member.trade) === teamName)
+    })).filter((group) => group.members.length > 0 && (!selectedReportTrade || group.teamName === selectedReportTrade));
+
+    return groups.map((group) => {
+      const sortByPosition = group.teamName === "Mason Team" || group.teamName === "Tiles Team";
+      const subTeamWise = true;
+      const members = [...group.members].sort((first, second) => {
+        if (subTeamWise) {
+          const subTeamCompare = memberSubTeamKey(first.trade).localeCompare(memberSubTeamKey(second.trade));
+          if (subTeamCompare !== 0) return subTeamCompare;
+        }
+        if (sortByPosition) {
+          const positionCompare = String(first.position || "").localeCompare(String(second.position || ""));
+          if (positionCompare !== 0) return positionCompare;
+        }
+        return String(first.name || "").localeCompare(String(second.name || ""));
+      });
+      const sectionMap = new Map();
+
+      members.forEach((member) => {
+        const sectionKey = memberSubTeamKey(member.trade);
+        if (!sectionMap.has(sectionKey)) {
+          sectionMap.set(sectionKey, {
+            sectionName: formatSubTeamHeading(memberSubTeamName(member.trade)),
+            members: []
+          });
+        }
+        sectionMap.get(sectionKey).members.push(member);
+      });
+
+      let serialStart = 1;
+      const sections = Array.from(sectionMap.values()).map((sectionGroup) => {
+        const section = { sectionName: sectionGroup.sectionName, members: sectionGroup.members, serialStart };
+        serialStart += sectionGroup.members.length;
+        return section;
+      });
+
+      return { ...group, members, sections, sortByPosition, subTeamWise };
+    });
+  }
+
   function isSunday(date) {
     return new Date(`${date}T00:00:00`).getDay() === 0;
   }
@@ -2302,6 +2821,85 @@ function TeamPanel({ user, users = [], teams, reload, setMessage }) {
       leaveType: entry?.leaveType || "Present",
       remark: entry?.remark || ""
     };
+  }
+
+  function cleanMemberUpdatePayload(member, team) {
+    return {
+      name: member.name,
+      position: member.position || "",
+      trade: member.trade,
+      phone: member.phone || "",
+      site: member.site || team.siteLocation,
+      fixedSalary: Number(member.fixedSalary || 0),
+      overtimeHourlyRate: Number(member.overtimeHourlyRate || 0),
+      labourCount: Number(member.labourCount || 0),
+      labourSalary: Number(member.labourSalary || 0),
+      labourEntries: member.labourEntries || [],
+      status: member.status || "active"
+    };
+  }
+
+  function memberEditFormFor(member, team) {
+    return editingMemberForms[member._id] || {
+      name: member.name || "",
+      position: member.position || "",
+      trade: member.trade || "",
+      phone: member.phone || "",
+      fixedSalary: member.fixedSalary || 0,
+      overtimeHourlyRate: member.overtimeHourlyRate || 0,
+      labourCount: member.labourCount || 0,
+      labourSalary: member.labourSalary || 0,
+      labourEntries: member.labourEntries || [],
+      site: member.site || team.siteLocation,
+      status: member.status || "active"
+    };
+  }
+
+  function startMemberEdit(member, team) {
+    setEditingMemberForms((current) => ({
+      ...current,
+      [member._id]: memberEditFormFor(member, team)
+    }));
+  }
+
+  function changeMemberEdit(memberId, key, value) {
+    setEditingMemberForms((current) => ({
+      ...current,
+      [memberId]: {
+        ...current[memberId],
+        [key]: value
+      }
+    }));
+  }
+
+  function approvalTeamId(request) {
+    return request.team?._id || request.team || "";
+  }
+
+  function latestMemberRequest(team, member) {
+    return approvals.find((request) => {
+      if (String(approvalTeamId(request)) !== String(team._id)) return false;
+      if (request.memberId && String(request.memberId) === String(member._id)) return true;
+      if (request.type !== "add_member") return false;
+
+      const payload = request.payload || {};
+      return payload.name === member.name
+        && payload.trade === member.trade
+        && String(payload.phone || "") === String(member.phone || "");
+    });
+  }
+
+  function requestStatusText(request) {
+    if (!request) return "No request";
+    if (request.status === "pending") return "Request pending";
+    if (request.status === "approved") return "Request accepted";
+    if (request.status === "rejected") return "Request rejected";
+    return request.status;
+  }
+
+  function requestTypeText(request) {
+    if (!request) return "Ready";
+    return request.type.replace("_member", "").replace("_", " ");
   }
 
   async function submitMember(event) {
@@ -2325,26 +2923,51 @@ function TeamPanel({ user, users = [], teams, reload, setMessage }) {
       method: "POST",
       body: JSON.stringify({
         type: "add_member",
-        payload: { ...memberPayload, trade, site: selectedMemberSiteLocation }
+        payload: {
+          ...memberPayload,
+          trade,
+          site: selectedMemberSiteLocation,
+          fixedSalary: Number(memberForm.fixedSalary || 0),
+          overtimeHourlyRate: Number(memberForm.overtimeHourlyRate || 0)
+        }
       })
     });
 
-    setMemberForm({ name: "", trade: "", teamDetail: "", phone: "", site: "" });
+    setMemberForm(initialMemberForm);
     setMessage("Team member change sent to Super Admin for approval");
     reload();
   }
 
-  async function requestMemberUpdate(team, member, type) {
+  async function requestMemberUpdate(team, member, type, payloadOverride = null) {
     const payload = type === "delete_member"
       ? {}
-      : { ...member, status: member.status === "active" ? "inactive" : "active" };
+      : payloadOverride || cleanMemberUpdatePayload(member, team);
 
     await apiRequest(`/teams/${team._id}/members/request`, {
       method: "POST",
       body: JSON.stringify({ type, memberId: member._id, payload })
     });
-    setMessage("Update request forwarded to Super Admin approval");
-    reload();
+    setMessage(type === "delete_member" ? "Delete request sent to Super Admin" : "Update request sent to Super Admin");
+    if (type === "update_member") {
+      setEditingMemberForms((current) => {
+        const next = { ...current };
+        delete next[member._id];
+        return next;
+      });
+    }
+    await reload();
+  }
+
+  async function submitMemberEdit(team, member) {
+    const form = memberEditFormFor(member, team);
+    await requestMemberUpdate(team, member, "update_member", {
+      ...form,
+      fixedSalary: Number(form.fixedSalary || 0),
+      overtimeHourlyRate: Number(form.overtimeHourlyRate || 0),
+      labourCount: Number(form.labourCount || 0),
+      labourSalary: Number(form.labourSalary || 0),
+      labourEntries: form.labourEntries || []
+    });
   }
 
   async function saveSalary(team, member) {
@@ -2397,17 +3020,25 @@ function TeamPanel({ user, users = [], teams, reload, setMessage }) {
     }
     const form = dailyOvertimeFormFor(member, date);
 
-    await apiRequest(`/teams/${team._id}/members/${member._id}/overtime`, {
-      method: "POST",
-      body: JSON.stringify({ ...form, date })
-    });
+    try {
+      await apiRequest(`/teams/${team._id}/members/${member._id}/overtime`, {
+        method: "POST",
+        body: JSON.stringify({ ...form, date })
+      });
 
-    setDailyOvertimeForms({
-      ...dailyOvertimeForms,
-      [`${member._id}-${date}`]: { hours: "", note: "" }
-    });
-    setMessage("Date-wise overtime added");
-    reload();
+      setDailyOvertimeForms({
+        ...dailyOvertimeForms,
+        [`${member._id}-${date}`]: { hours: "", note: "" }
+      });
+      setEditingOvertimeForms((current) => ({
+        ...current,
+        [`${member._id}-${date}`]: false
+      }));
+      setMessage("Date-wise overtime added");
+      await reload();
+    } catch (error) {
+      setMessage(error.message);
+    }
   }
 
   async function saveAdminAttendance(date, leaveType) {
@@ -2426,10 +3057,25 @@ function TeamPanel({ user, users = [], teams, reload, setMessage }) {
   const visibleTeams = user.role === "super_admin"
     ? teams.filter((team) => team.members.length > 0)
     : teams;
+  const canShowMemberList = user.role === "admin" || user.role === "super_admin";
+  const canRequestMemberChanges = user.role === "admin";
 
   return (
-    <section className="team-section">
-      {canAssignedAdminRequest && (
+    <section className={`team-section ${membersOnly ? "members-page" : ""}`}>
+      {membersOnly && (
+        <section className="panel members-page-header">
+          <div>
+            <h2>Members Details</h2>
+            <p className="muted">View all created team members, salary, team, site, and admin transfer controls.</p>
+          </div>
+          <button className="ghost-button compact" type="button" onClick={onBack}>
+            <ChevronLeft size={16} />
+            Back to dashboard
+          </button>
+        </section>
+      )}
+
+      {!membersOnly && canAssignedAdminRequest && (
         <div className="team-workspace">
           <aside className="team-workspace-left">
             <form className="panel member-form" onSubmit={submitMember}>
@@ -2440,7 +3086,6 @@ function TeamPanel({ user, users = [], teams, reload, setMessage }) {
                   <span>{selectedMemberSiteLocation}</span>
                 </div>
               </div>
-              <input placeholder="Name" value={memberForm.name} onChange={(e) => setMemberForm({ ...memberForm, name: e.target.value })} required />
               <select
                 value={memberForm.trade}
                 onChange={(e) => setMemberForm({
@@ -2457,13 +3102,31 @@ function TeamPanel({ user, users = [], teams, reload, setMessage }) {
               </select>
               {MEMBER_TEAM_OPTIONS_REQUIRING_DETAIL.has(memberForm.trade) && (
                 <input
-                  placeholder={memberForm.trade === "Other" ? "Other team name" : "Mason team detail"}
+                  placeholder="Contractor"
                   value={memberForm.teamDetail}
                   onChange={(e) => setMemberForm({ ...memberForm, teamDetail: e.target.value })}
                   required
                 />
               )}
+              <input placeholder="Name" value={memberForm.name} onChange={(e) => setMemberForm({ ...memberForm, name: e.target.value })} required />
+              <input placeholder="Position" value={memberForm.position} onChange={(e) => setMemberForm({ ...memberForm, position: e.target.value })} />
               <input placeholder="Phone" value={memberForm.phone} onChange={(e) => setMemberForm({ ...memberForm, phone: e.target.value })} />
+              <div className="member-form-salary-row">
+                <input
+                  placeholder="Current salary"
+                  type="number"
+                  min="0"
+                  value={memberForm.fixedSalary}
+                  onChange={(e) => setMemberForm({ ...memberForm, fixedSalary: e.target.value })}
+                />
+                <input
+                  placeholder="OT salary"
+                  type="number"
+                  min="0"
+                  value={memberForm.overtimeHourlyRate}
+                  onChange={(e) => setMemberForm({ ...memberForm, overtimeHourlyRate: e.target.value })}
+                />
+              </div>
               <input placeholder="Project address" value={selectedMemberSiteLocation} readOnly />
               <button className="primary-button" type="submit"><Plus size={18} /> Send for approval</button>
             </form>
@@ -2551,85 +3214,98 @@ function TeamPanel({ user, users = [], teams, reload, setMessage }) {
             </div>
             <span>{team.members.length} member{team.members.length === 1 ? "" : "s"}</span>
           </div>
-          <div className="member-table">
-            {team.members.map((member) => (
-              <div className="member-row salary-row" key={member._id}>
-                <div className="member-profile">
-                  <span className="member-avatar">{member.name?.charAt(0)?.toUpperCase() || "M"}</span>
-                  <strong>{member.name}</strong>
-                  <span className="member-team-label">Team name</span>
-                  <strong className="member-team-name">{member.trade}</strong>
-                  <span>{member.phone || "No phone"}</span>
-                  <span>{team.siteLocation}</span>
-                </div>
-
-                <div className="salary-summary">
-                  <div>
-                    <span>Current daily</span>
-                    <strong>{money(member.fixedSalary)}</strong>
-                  </div>
-                  <div>
-                    <span>Present days</span>
-                    <strong>{attendanceDays(member)}</strong>
-                  </div>
-                  <div>
-                    <span>Day salary</span>
-                    <strong>{money(attendanceSalary(member))}</strong>
-                  </div>
-                  <div>
-                    <span>OT</span>
-                    <strong>{money(overtimeTotal(member))}</strong>
-                  </div>
-                  <div>
-                    <span>Total</span>
-                    <strong>{money(memberTotal(member))}</strong>
-                  </div>
-                  <small>{member.overtimeEntries?.length || 0} overtime entries at {money(member.overtimeHourlyRate)}/hr</small>
-                </div>
-
-                {user.role === "admin" && (
-                  <form className="today-ot-form" onSubmit={(event) => addDailyOvertime(event, team, member, todayKey)}>
-                    <input
-                      aria-label="Today overtime hours"
-                      placeholder="Today OT"
-                      type="number"
-                      min="0"
-                      step="0.5"
-                      value={dailyOvertimeFormFor(member, todayKey).hours}
-                      onChange={(event) => setDailyOvertimeForms({
-                        ...dailyOvertimeForms,
-                        [`${member._id}-${todayKey}`]: {
-                          ...dailyOvertimeFormFor(member, todayKey),
-                          hours: event.target.value
-                        }
-                      })}
-                      disabled={!member.overtimeHourlyRate || member.overtimeHourlyRate <= 0}
-                      required
-                    />
-                    <input
-                      aria-label="Today overtime remarks"
-                      placeholder="Remarks"
-                      value={dailyOvertimeFormFor(member, todayKey).note}
-                      onChange={(event) => setDailyOvertimeForms({
-                        ...dailyOvertimeForms,
-                        [`${member._id}-${todayKey}`]: {
-                          ...dailyOvertimeFormFor(member, todayKey),
-                          note: event.target.value
-                        }
-                      })}
-                      disabled={!member.overtimeHourlyRate || member.overtimeHourlyRate <= 0}
-                      required
-                    />
-                    <button type="submit" disabled={!member.overtimeHourlyRate || member.overtimeHourlyRate <= 0}>
-                      <Clock size={14} />
-                      Save OT
-                    </button>
-                  </form>
-                )}
-
-                <div className="member-toolbar">
-                  {(user.role === "admin" || user.role === "super_admin") && (
-                    <div className="member-move-control">
+          {membersOnly && canShowMemberList && team.members.length > 0 && (
+            <div className={`created-member-list ${canRequestMemberChanges ? "" : "without-member-actions"}`}>
+              <div className="created-member-head">
+                <span>Name</span>
+                <span>Position</span>
+                <span>Team</span>
+                <span>Phone</span>
+                <span>Current salary</span>
+                <span>OT salary</span>
+                <span>Site</span>
+                <span>Move admin</span>
+                {canRequestMemberChanges && <span>Actions</span>}
+              </div>
+              {team.members.map((member) => {
+                const request = latestMemberRequest(team, member);
+                const isEditing = Boolean(editingMemberForms[member._id]);
+                const editForm = memberEditFormFor(member, team);
+                return (
+                  <div className="created-member-row" key={`created-${member._id}`}>
+                    <div className="created-member-name-cell">
+                      {isEditing ? (
+                        <input
+                          aria-label="Member name"
+                          value={editForm.name}
+                          onChange={(event) => changeMemberEdit(member._id, "name", event.target.value)}
+                        />
+                      ) : (
+                        <strong>{member.name}</strong>
+                      )}
+                      <small className={`request-status-text ${request?.status || "idle"}`}>
+                        {requestStatusText(request)}{request ? ` - ${requestTypeText(request)}` : ""}
+                      </small>
+                    </div>
+                    {isEditing ? (
+                      <input
+                        aria-label="Position"
+                        value={editForm.position}
+                        onChange={(event) => changeMemberEdit(member._id, "position", event.target.value)}
+                      />
+                    ) : (
+                      <span>{member.position || "-"}</span>
+                    )}
+                    {isEditing ? (
+                      <input
+                        aria-label="Team"
+                        value={editForm.trade}
+                        onChange={(event) => changeMemberEdit(member._id, "trade", event.target.value)}
+                      />
+                    ) : (
+                      <span>{member.trade}</span>
+                    )}
+                    {isEditing ? (
+                      <input
+                        aria-label="Phone"
+                        value={editForm.phone}
+                        onChange={(event) => changeMemberEdit(member._id, "phone", event.target.value)}
+                      />
+                    ) : (
+                      <span>{member.phone || "-"}</span>
+                    )}
+                    {isEditing ? (
+                      <input
+                        aria-label="Current salary"
+                        type="number"
+                        min="0"
+                        value={editForm.fixedSalary}
+                        onChange={(event) => changeMemberEdit(member._id, "fixedSalary", event.target.value)}
+                      />
+                    ) : (
+                      <span>{money(member.fixedSalary || 0)}</span>
+                    )}
+                    {isEditing ? (
+                      <input
+                        aria-label="OT salary"
+                        type="number"
+                        min="0"
+                        value={editForm.overtimeHourlyRate}
+                        onChange={(event) => changeMemberEdit(member._id, "overtimeHourlyRate", event.target.value)}
+                      />
+                    ) : (
+                      <span>{money(member.overtimeHourlyRate || 0)}/hr</span>
+                    )}
+                    {isEditing ? (
+                      <input
+                        aria-label="Site"
+                        value={editForm.site}
+                        onChange={(event) => changeMemberEdit(member._id, "site", event.target.value)}
+                      />
+                    ) : (
+                      <span>{member.site || team.siteLocation}</span>
+                    )}
+                    <div className="created-member-move">
                       <select
                         aria-label={`Move ${member.name} to admin`}
                         value={memberMoveForms[member._id] || ""}
@@ -2653,85 +3329,184 @@ function TeamPanel({ user, users = [], teams, reload, setMessage }) {
                         {movingMemberId === member._id ? "Moving..." : "Move"}
                       </button>
                     </div>
-                  )}
-                  {user.role === "admin" && (
-                    <div className="action-row compact member-actions">
-                      <button type="button" onClick={() => requestMemberUpdate(team, member, "delete_member")}>Delete</button>
-                    </div>
-                  )}
-                </div>
-
-                {user.role === "super_admin" && (
-                  <div className="salary-controls">
-                    <label>
-                      Current daily salary
-                      <input
-                        aria-label="Current daily salary"
-                        type="number"
-                        min="0"
-                        value={salaryFormFor(member).fixedSalary}
-                        onChange={(event) => setSalaryForms({
-                          ...salaryForms,
-                          [member._id]: { ...salaryFormFor(member), fixedSalary: event.target.value }
-                        })}
-                      />
-                    </label>
-                    <label>
-                      OT hour salary
-                      <input
-                        aria-label="OT hour salary"
-                        type="number"
-                        min="0"
-                        value={salaryFormFor(member).overtimeHourlyRate}
-                        onChange={(event) => setSalaryForms({
-                          ...salaryForms,
-                          [member._id]: { ...salaryFormFor(member), overtimeHourlyRate: event.target.value }
-                        })}
-                      />
-                    </label>
-                    <button onClick={() => saveSalary(team, member)}>
-                      <IndianRupee size={16} />
-                      Save salary
-                    </button>
+                    {canRequestMemberChanges && (
+                      <div className="created-member-actions">
+                        <button
+                          type="button"
+                          onClick={() => isEditing ? submitMemberEdit(team, member) : startMemberEdit(member, team)}
+                        >
+                          {isEditing ? "Update" : "Edit"}
+                        </button>
+                        <button type="button" onClick={() => requestMemberUpdate(team, member, "delete_member")}>
+                          Delete
+                        </button>
+                      </div>
+                    )}
                   </div>
-                )}
-
-                {(user.role === "admin" || user.role === "super_admin") && (
-                  <div className="attendance-member inline-attendance">
-                    <div className="attendance-name">
-                      <strong>Weekly Attendance</strong>
+                );
+              })}
+            </div>
+          )}
+          {!membersOnly && (
+            <div className="team-report-stack">
+              {groupedMemberReports(team).map((group) => (
+                <section className="team-report-card" key={`${team._id}-${group.teamName}`}>
+                  <div className="team-report-heading">
+                    <div>
+                      <h3>{group.teamName}</h3>
+                      <span>Sub-team and position wise report</span>
                     </div>
-                    <div className="attendance-grid">
-                      {currentWeek.map((date) => (
-                        <div className="attendance-day" key={`${member._id}-${date}`}>
-                          <span>{shortDateLabel(date)}</span>
-                          {user.role === "admin" && date === todayKey ? (
-                            <select
-                              className={`attendance-select ${attendanceFor(member, date)}`}
-                              value={attendanceFor(member, date)}
-                              onChange={(event) => updateAttendance(team, member, date, event.target.value)}
-                            >
-                              <option value="present">Present</option>
-                              <option value="absent">Absent</option>
-                              <option value="half">0.5 day</option>
-                            </select>
-                          ) : (
-                            <span className={`attendance-pill ${attendanceFor(member, date)}`}>
-                              {attendanceFor(member, date) === "half" ? "0.5 day" : attendanceFor(member, date)}
-                            </span>
-                          )}
-                          <small>Daily salary: {money(attendanceSalaryForDate(member, date))}</small>
-                          <small>OT: {overtimeForDate(member, date)} hr - {money(overtimeAmountForDate(member, date))}</small>
-                          <small>Remarks: {overtimeRemarksForDate(member, date) || "No remarks"}</small>
-                        </div>
-                      ))}
-                    </div>
+                    <strong>{group.members.length} member{group.members.length === 1 ? "" : "s"}</strong>
                   </div>
-                )}
+                  <div className="team-report-table-wrap">
+                    <table className="team-report-table">
+                      <thead>
+                        <tr>
+                          <th rowSpan="2">S.No</th>
+                          <th rowSpan="2">Name</th>
+                          <th rowSpan="2">Current Salary</th>
+                          <th rowSpan="2">Total OT Salary</th>
+                          <th rowSpan="2">Total Salary</th>
+                          <th colSpan="2">{shortDateLabel(todayKey)}</th>
+                        </tr>
+                        <tr>
+                          <th>Attendance</th>
+                          <th>OT / Remarks</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {group.sections.map((section) => (
+                          <React.Fragment key={`${group.teamName}-${section.sectionName}`}>
+                            <tr className="team-report-subheading">
+                              <td colSpan="7">{section.sectionName}</td>
+                            </tr>
+                            {section.members.map((member, index) => {
+                              const attendance = attendanceFor(member, todayKey);
+                              const todayOvertime = dailyOvertimeFormFor(member, todayKey);
 
-              </div>
-            ))}
-          </div>
+                              return (
+                                <tr key={`report-${member._id}`}>
+                                  <td>{section.serialStart + index}</td>
+                                  <td>
+                                    <strong>{member.name}</strong>
+                                    <span>{member.position || "No position"}</span>
+                                    <small>{member.trade}</small>
+                                  </td>
+                                  <td>{money(member.fixedSalary)}</td>
+                                  <td>{money(overtimeTotal(member))}</td>
+                                  <td>{money(Number(member.fixedSalary || 0) + overtimeTotal(member))}</td>
+                                  <td>
+                                    {user.role === "admin" ? (
+                                      <select
+                                        className={`attendance-select compact ${attendance}`}
+                                        value={attendance}
+                                        onChange={(event) => updateAttendance(team, member, todayKey, event.target.value)}
+                                      >
+                                        <option value="present">P</option>
+                                        <option value="absent">A</option>
+                                        <option value="half">0.5</option>
+                                      </select>
+                                    ) : (
+                                      <strong className={`attendance-pill compact ${attendance}`}>
+                                        {attendanceShortLabel(attendance)}
+                                      </strong>
+                                    )}
+                                  </td>
+                                  <td>
+                                    {(() => {
+                                      if (user.role !== "admin") {
+                                        return (
+                                          <div className="report-ot-text">
+                                            <span>{overtimeForDate(member, todayKey)} hr - {money(overtimeAmountForDate(member, todayKey))}</span>
+                                            <small>{overtimeRemarksForDate(member, todayKey) || "No remarks"}</small>
+                                          </div>
+                                        );
+                                      }
+
+                                      const todayOvertimeHours = overtimeForDate(member, todayKey);
+                                      const todayOvertimeRemarks = overtimeRemarksForDate(member, todayKey);
+                                      const hasOTData = todayOvertimeHours > 0 || todayOvertimeRemarks;
+                                      const isEditingState = editingOvertimeForms[`${member._id}-${todayKey}`];
+                                      const disableInputs = hasOTData && !isEditingState;
+
+                                      return (
+                                        <form className="report-ot-form" style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "nowrap" }} onSubmit={(event) => addDailyOvertime(event, team, member, todayKey)}>
+                                          <input
+                                            aria-label={`${member.name} today overtime hours`}
+                                            placeholder="OT"
+                                            type="number"
+                                            min="0"
+                                            step="0.5"
+                                            value={todayOvertime.hours}
+                                            style={{ width: "70px", minWidth: "70px" }}
+                                            disabled={disableInputs}
+                                            onChange={(event) => setDailyOvertimeForms({
+                                              ...dailyOvertimeForms,
+                                              [`${member._id}-${todayKey}`]: {
+                                                ...todayOvertime,
+                                                hours: event.target.value
+                                              }
+                                            })}
+                                          />
+                                          <input
+                                            aria-label={`${member.name} today overtime remarks`}
+                                            placeholder="Remarks"
+                                            value={todayOvertime.note}
+                                            style={{ width: "150px", minWidth: "150px" }}
+                                            disabled={disableInputs}
+                                            onChange={(event) => setDailyOvertimeForms({
+                                              ...dailyOvertimeForms,
+                                              [`${member._id}-${todayKey}`]: {
+                                                ...todayOvertime,
+                                                note: event.target.value
+                                              }
+                                            })}
+                                          />
+                                          {disableInputs ? (
+                                            <button 
+                                              type="button" 
+                                              className="ghost-button" 
+                                              style={{ padding: "0 8px", whiteSpace: "nowrap" }}
+                                              onClick={() => setEditingOvertimeForms({
+                                                ...editingOvertimeForms,
+                                                [`${member._id}-${todayKey}`]: true
+                                              })}
+                                            >
+                                              Edit
+                                            </button>
+                                          ) : hasOTData ? (
+                                            <button 
+                                              type="button" 
+                                              className="ghost-button" 
+                                              style={{ padding: "0 8px", whiteSpace: "nowrap" }}
+                                              onClick={() => setEditingOvertimeForms({
+                                                ...editingOvertimeForms,
+                                                [`${member._id}-${todayKey}`]: false
+                                              })}
+                                            >
+                                              Cancel
+                                            </button>
+                                          ) : null}
+                                          <button type="submit" style={{ whiteSpace: "nowrap" }} disabled={disableInputs || !member.overtimeHourlyRate || member.overtimeHourlyRate <= 0}>
+                                            <Clock size={14} />
+                                            Save
+                                          </button>
+                                        </form>
+                                      );
+                                    })()}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </React.Fragment>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
+              ))}
+            </div>
+          )}
         </article>
       ))}
     </section>

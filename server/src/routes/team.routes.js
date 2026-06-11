@@ -39,7 +39,7 @@ async function userCanManageTeam(user, teamId) {
 }
 
 function cleanMemberPayload(payload = {}) {
-  const allowed = ["name", "trade", "phone", "site", "status"];
+  const allowed = ["name", "position", "trade", "phone", "site", "fixedSalary", "overtimeHourlyRate", "labourCount", "labourSalary", "labourEntries", "status"];
   return Object.fromEntries(Object.entries(payload).filter(([key]) => allowed.includes(key)));
 }
 
@@ -407,6 +407,7 @@ router.post("/:teamId/members/:memberId/overtime", requireAuth, async (req, res,
       { new: true, upsert: true }
     );
 
+    await Overtime.deleteMany({ team: team._id, member: member._id, date });
     const overtime = await Overtime.create({
       team: team._id,
       member: member._id,
