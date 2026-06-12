@@ -627,6 +627,25 @@ button:disabled {
   color: #fff8e8;
 }
 
+.nav-count-badge {
+  align-items: center;
+  background: #df960f;
+  border-radius: 999px;
+  color: #ffffff;
+  display: inline-flex;
+  font-size: 0.76rem;
+  font-weight: 900;
+  height: 22px;
+  justify-content: center;
+  min-width: 22px;
+  padding: 0 7px;
+}
+
+.dashboard-nav-button.active .nav-count-badge {
+  background: #ffffff;
+  color: #1d2521;
+}
+
 .team-legend {
   align-items: center;
   background: #ffffff;
@@ -2190,6 +2209,20 @@ button.team-legend-chip {
   border-top: 0;
 }
 
+.team-report-table .team-report-position-heading td {
+  background: #fff3cf;
+  border-top: 1px solid #e0c987;
+  color: #b42318;
+  font-size: 0.82rem;
+  font-weight: 900;
+  padding: 7px 14px;
+  text-transform: uppercase;
+}
+
+.team-report-table .team-report-position-heading + tr td {
+  border-top: 0;
+}
+
 .team-report-table td strong,
 .team-report-table td span,
 .team-report-table td small {
@@ -2574,14 +2607,25 @@ body {
 }
 
 .panel-link {
+  align-items: center;
   background: #ffffff;
   border: 1px solid #f0d5ad;
   border-radius: 5px;
   color: #d68100;
+  display: inline-flex;
   font-size: 0.78rem;
   font-weight: 700;
+  gap: 6px;
   min-height: 30px;
   padding: 6px 12px;
+}
+
+.focused-panel-grid {
+  grid-template-columns: 1fr;
+}
+
+.focused-table-panel {
+  grid-column: 1 / -1;
 }
 
 .mini-table-head {

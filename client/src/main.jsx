@@ -687,6 +687,8 @@ function Dashboard({ user, logout }) {
   const [selectedAdminControlId, setSelectedAdminControlId] = useState("");
   const [expandedTeamNames, setExpandedTeamNames] = useState({});
   const [showAdminDataControl, setShowAdminDataControl] = useState(false);
+  const [showAdminUsers, setShowAdminUsers] = useState(false);
+  const [showApprovalRequests, setShowApprovalRequests] = useState(false);
   const [showMembersPage, setShowMembersPage] = useState(false);
   const [showOverallAttendance, setShowOverallAttendance] = useState(false);
   const [selectedReportTrade, setSelectedReportTrade] = useState("");
@@ -778,13 +780,18 @@ function Dashboard({ user, logout }) {
   const stats = useMemo(() => {
     const memberCount = visibleTeams.reduce((total, team) => total + team.members.length, 0);
     const payrollTotal = visibleTeams.reduce((total, team) => total + teamPayrollTotal(team), 0);
+    const pendingApprovalCount = visibleApprovals.filter((item) => item.status === "pending").length;
     return [
       { label: "Teams", value: buildTeamGroups(visibleTeams).length, icon: Users },
       { label: "Members", value: memberCount, icon: HardHat },
       { label: "Payroll total", value: money(payrollTotal), icon: IndianRupee },
-      { label: "Pending approvals", value: visibleApprovals.filter((item) => item.status === "pending").length, icon: ClipboardCheck }
+      { label: "Pending approvals", value: pendingApprovalCount, icon: ClipboardCheck }
     ];
   }, [visibleTeams, visibleApprovals]);
+  const pendingApprovalCount = useMemo(
+    () => visibleApprovals.filter((item) => item.status === "pending").length,
+    [visibleApprovals]
+  );
 
   return (
     <main className="app-shell">
@@ -945,12 +952,16 @@ function Dashboard({ user, logout }) {
                   tabIndex={stat.label === "Members" ? 0 : undefined}
                   onClick={stat.label === "Members" ? () => {
                     setShowAdminDataControl(false);
+                    setShowAdminUsers(false);
+                    setShowApprovalRequests(false);
                     setShowMembersPage(true);
                   } : undefined}
                   onKeyDown={stat.label === "Members" ? (event) => {
                     if (event.key === "Enter" || event.key === " ") {
                       event.preventDefault();
                       setShowAdminDataControl(false);
+                      setShowAdminUsers(false);
+                      setShowApprovalRequests(false);
                       setShowMembersPage(true);
                     }
                   } : undefined}
@@ -979,10 +990,45 @@ function Dashboard({ user, logout }) {
                     setShowOverallAttendance(!showOverallAttendance);
                     setShowMembersPage(false);
                     setShowAdminDataControl(false);
+                    setShowAdminUsers(false);
+                    setShowApprovalRequests(false);
                   }}
                 >
                   <CalendarDays size={18} />
                   Overall Attendance
+                </button>
+              )}
+              {user.role === "super_admin" && (
+                <button
+                  className={`dashboard-nav-button ${showAdminUsers ? "active" : ""}`}
+                  type="button"
+                  onClick={() => {
+                    setShowAdminUsers(!showAdminUsers);
+                    setShowMembersPage(false);
+                    setShowOverallAttendance(false);
+                    setShowAdminDataControl(false);
+                    setShowApprovalRequests(false);
+                  }}
+                >
+                  <UserPlus size={18} />
+                  All Admin Users
+                </button>
+              )}
+              {user.role === "super_admin" && (
+                <button
+                  className={`dashboard-nav-button ${showApprovalRequests ? "active" : ""}`}
+                  type="button"
+                  onClick={() => {
+                    setShowApprovalRequests(!showApprovalRequests);
+                    setShowMembersPage(false);
+                    setShowOverallAttendance(false);
+                    setShowAdminUsers(false);
+                    setShowAdminDataControl(false);
+                  }}
+                >
+                  <ClipboardCheck size={18} />
+                  Approval Requests
+                  <span className="nav-count-badge">{pendingApprovalCount}</span>
                 </button>
               )}
               {user.role === "super_admin" && (
@@ -992,6 +1038,8 @@ function Dashboard({ user, logout }) {
                   onClick={() => {
                     setShowMembersPage(false);
                     setShowOverallAttendance(false);
+                    setShowAdminUsers(false);
+                    setShowApprovalRequests(false);
                     setShowAdminDataControl(true);
                   }}
                 >
@@ -1023,6 +1071,26 @@ function Dashboard({ user, logout }) {
             teams={visibleTeams}
             selectedTrade={selectedReportTrade}
             onBack={() => setShowOverallAttendance(false)}
+          />
+        ) : user.role === "super_admin" && showAdminUsers ? (
+          <SuperAdminPanel
+            users={visibleUsers}
+            teams={visibleTeams}
+            approvals={visibleApprovals}
+            reload={refreshData}
+            setMessage={setMessage}
+            showAdminUsers
+            onBack={() => setShowAdminUsers(false)}
+          />
+        ) : user.role === "super_admin" && showApprovalRequests ? (
+          <SuperAdminPanel
+            users={visibleUsers}
+            teams={visibleTeams}
+            approvals={visibleApprovals}
+            reload={refreshData}
+            setMessage={setMessage}
+            showApprovalRequests
+            onBack={() => setShowApprovalRequests(false)}
           />
         ) : user.role === "super_admin" && showAdminDataControl ? (
           <AdminDataControlPage
@@ -1642,7 +1710,7 @@ function AdminDataControl({ users, teams = [], reload, setMessage, showHeading =
   );
 }
 
-function SuperAdminPanel({ users, teams, approvals, reload, setMessage }) {
+function SuperAdminPanel({ users, teams, approvals, reload, setMessage, showAdminUsers = false, showApprovalRequests = false, onBack }) {
   const [newUser, setNewUser] = useState({
     name: "",
     email: "",
@@ -1869,6 +1937,163 @@ function SuperAdminPanel({ users, teams, approvals, reload, setMessage }) {
   const selectedTeam = teams.find((team) => team._id === selectedTeamId);
   const visibleApprovals = approvals.filter((request) => !hiddenApprovalIds.includes(request._id));
 
+  if (showAdminUsers) {
+    return (
+      <section className="panel-grid focused-panel-grid">
+        <article className="panel table-panel focused-table-panel">
+          <PanelHeading
+            icon={UserPlus}
+            title="Admin Users"
+            action={onBack && (
+              <button className="panel-link back-link" type="button" onClick={onBack}>
+                <ChevronLeft size={16} />
+                Back to dashboard
+              </button>
+            )}
+          />
+          <div className="mini-table-head admin-table-head">
+            <span>Name</span>
+            <span>Email</span>
+            <span>Project</span>
+            <span>Created On</span>
+          </div>
+          <div className="user-password-list">
+            {users.filter((item) => item.role !== "super_admin").map((item) => (
+              <div className={`password-row ${editingAdminId === item._id ? "admin-edit-row" : ""}`} key={item._id}>
+                {editingAdminId === item._id ? (
+                  <>
+                    <input value={adminEditForm.name} onChange={(event) => setAdminEditForm({ ...adminEditForm, name: event.target.value })} />
+                    <input type="email" value={adminEditForm.email} onChange={(event) => setAdminEditForm({ ...adminEditForm, email: event.target.value })} />
+                    <input placeholder="Position" value={adminEditForm.position} onChange={(event) => setAdminEditForm({ ...adminEditForm, position: event.target.value })} />
+                    <select value={adminEditForm.assignedTeam} onChange={(event) => setAdminEditForm({ ...adminEditForm, assignedTeam: event.target.value })}>
+                      <option value="">Assign project</option>
+                      {teams.map((team) => (
+                        <option key={team._id} value={team._id}>{team.name} - {team.siteLocation}</option>
+                      ))}
+                    </select>
+                    <input
+                      aria-label="Monthly salary"
+                      placeholder="Monthly salary"
+                      type="number"
+                      min="0"
+                      value={adminEditForm.monthlySalary}
+                      onChange={(event) => setAdminEditForm({ ...adminEditForm, monthlySalary: event.target.value })}
+                    />
+                    <input
+                      aria-label="Daily salary"
+                      placeholder="Daily salary"
+                      value={editAdminDailySalary ? editAdminDailySalary.toFixed(2).replace(/\.00$/, "") : "0"}
+                      readOnly
+                    />
+                    <div className="action-row compact">
+                      <button type="button" onClick={() => updateAdmin(item._id)}>Save</button>
+                      <button type="button" onClick={() => setEditingAdminId(null)}>Cancel</button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div>
+                      <strong>{item.name}</strong>
+                      <span>{item.email} - {item.assignedTeam?.name || "No site assigned"}</span>
+                      <span>Position: {item.position || "Not set"}</span>
+                      <span>Monthly: {money(item.monthlySalary || 0)} - Daily: {money(item.dailySalary || 0)}</span>
+                    </div>
+                    <input
+                      placeholder="New password"
+                      type="password"
+                      minLength="6"
+                      value={passwordForms[item._id] || ""}
+                      onChange={(event) => setPasswordForms({ ...passwordForms, [item._id]: event.target.value })}
+                    />
+                    <div className="action-row compact">
+                      <button type="button" onClick={() => updatePassword(item._id)}>Password</button>
+                      <button type="button" onClick={() => startEditAdmin(item)}>Edit</button>
+                      <button type="button" onClick={() => deleteAdmin(item._id)}>Delete</button>
+                    </div>
+                  </>
+                )}
+              </div>
+            ))}
+            {!users.filter((item) => item.role !== "super_admin").length && (
+              <EmptyState
+                icon={Users}
+                title="No admin logins created yet."
+                detail="Create your first admin login using the form above."
+              />
+            )}
+          </div>
+        </article>
+      </section>
+    );
+  }
+
+  if (showApprovalRequests) {
+    return (
+      <section className="panel-grid focused-panel-grid">
+        <article className="panel table-panel focused-table-panel">
+          <PanelHeading
+            icon={ClipboardCheck}
+            title="Approval Requests"
+            action={onBack && (
+              <button className="panel-link back-link" type="button" onClick={onBack}>
+                <ChevronLeft size={16} />
+                Back to dashboard
+              </button>
+            )}
+          />
+          <div className="mini-table-head approval-table-head">
+            <span>Request</span>
+            <span>Requested By</span>
+            <span>Team</span>
+            <span>Date</span>
+          </div>
+          <div className="request-list">
+            {visibleApprovals.map((request) => (
+              <div className="request-card" key={request._id}>
+                <div className="request-summary">
+                  <div>
+                    <span>Request</span>
+                    <strong>{request.type.replace("_", " ")}</strong>
+                  </div>
+                  <div>
+                    <span>Requested By</span>
+                    <strong>{request.requestedBy?.name || "-"}</strong>
+                  </div>
+                  <div>
+                    <span>Team</span>
+                    <strong>{request.team?.name || "-"}</strong>
+                  </div>
+                  <div>
+                    <span>Date</span>
+                    <strong>{new Date(request.createdAt).toLocaleString()}</strong>
+                  </div>
+                  <div>
+                    <span>Status</span>
+                    <strong className={`status ${request.status}`}>{request.status}</strong>
+                  </div>
+                </div>
+                {requestDetails(request)}
+                {request.status === "pending" && (
+                  <div className="action-row">
+                    <button className="approve-button" onClick={() => review(request._id, "approved")}><CheckCircle2 /> Approve</button>
+                    <button className="reject-button" onClick={() => review(request._id, "rejected")}><XCircle /> Reject</button>
+                  </div>
+                )}
+              </div>
+            ))}
+            {!visibleApprovals.length && (
+              <EmptyState
+                icon={ClipboardCheck}
+                title="No pending approval requests."
+                detail="You're all caught up!"
+              />
+            )}
+          </div>
+        </article>
+      </section>
+    );
+  }
+
   return (
     <section className="panel-grid">
       <article className="panel user-form-panel">
@@ -2046,6 +2271,7 @@ function SuperAdminPanel({ users, teams, approvals, reload, setMessage }) {
         </div>
       </article>
 
+      {showAdminUsers && (
       <article className="panel table-panel">
         <PanelHeading
           icon={UserPlus}
@@ -2124,62 +2350,8 @@ function SuperAdminPanel({ users, teams, approvals, reload, setMessage }) {
           )}
         </div>
       </article>
+      )}
 
-      <article className="panel table-panel">
-        <PanelHeading
-          icon={ClipboardCheck}
-          title="Approval Requests"
-          action={<button className="panel-link" type="button">View all</button>}
-        />
-        <div className="mini-table-head approval-table-head">
-          <span>Request</span>
-          <span>Requested By</span>
-          <span>Team</span>
-          <span>Date</span>
-        </div>
-        <div className="request-list">
-          {visibleApprovals.map((request) => (
-            <div className="request-card" key={request._id}>
-              <div className="request-summary">
-                <div>
-                  <span>Request</span>
-                  <strong>{request.type.replace("_", " ")}</strong>
-                </div>
-                <div>
-                  <span>Requested By</span>
-                  <strong>{request.requestedBy?.name || "-"}</strong>
-                </div>
-                <div>
-                  <span>Team</span>
-                  <strong>{request.team?.name || "-"}</strong>
-                </div>
-                <div>
-                  <span>Date</span>
-                  <strong>{new Date(request.createdAt).toLocaleString()}</strong>
-                </div>
-                <div>
-                  <span>Status</span>
-                  <strong className={`status ${request.status}`}>{request.status}</strong>
-                </div>
-              </div>
-              {requestDetails(request)}
-              {request.status === "pending" && (
-                <div className="action-row">
-                  <button className="approve-button" onClick={() => review(request._id, "approved")}><CheckCircle2 /> Approve</button>
-                  <button className="reject-button" onClick={() => review(request._id, "rejected")}><XCircle /> Reject</button>
-                </div>
-              )}
-            </div>
-          ))}
-          {!visibleApprovals.length && (
-            <EmptyState
-              icon={ClipboardCheck}
-              title="No pending approval requests."
-              detail="You're all caught up!"
-            />
-          )}
-        </div>
-      </article>
     </section>
   );
 }
@@ -2773,6 +2945,8 @@ function TeamPanel({ user, users = [], teams, approvals = [], reload, setMessage
           const subTeamCompare = memberSubTeamKey(first.trade).localeCompare(memberSubTeamKey(second.trade));
           if (subTeamCompare !== 0) return subTeamCompare;
         }
+        const salaryCompare = Number(second.fixedSalary || 0) - Number(first.fixedSalary || 0);
+        if (salaryCompare !== 0) return salaryCompare;
         if (sortByPosition) {
           const positionCompare = String(first.position || "").localeCompare(String(second.position || ""));
           if (positionCompare !== 0) return positionCompare;
@@ -2794,7 +2968,22 @@ function TeamPanel({ user, users = [], teams, approvals = [], reload, setMessage
 
       let serialStart = 1;
       const sections = Array.from(sectionMap.values()).map((sectionGroup) => {
-        const section = { sectionName: sectionGroup.sectionName, members: sectionGroup.members, serialStart };
+        const positionMap = new Map();
+        sectionGroup.members.forEach((member) => {
+          const positionKey = String(member.position || "No position").trim() || "No position";
+          if (!positionMap.has(positionKey)) {
+            positionMap.set(positionKey, []);
+          }
+          positionMap.get(positionKey).push(member);
+        });
+
+        let positionSerialStart = serialStart;
+        const positionGroups = Array.from(positionMap.entries()).map(([positionName, members]) => {
+          const positionGroup = { positionName, members, serialStart: positionSerialStart };
+          positionSerialStart += members.length;
+          return positionGroup;
+        });
+        const section = { sectionName: sectionGroup.sectionName, members: sectionGroup.members, positionGroups, serialStart };
         serialStart += sectionGroup.members.length;
         return section;
       });
@@ -3014,10 +3203,6 @@ function TeamPanel({ user, users = [], teams, approvals = [], reload, setMessage
 
   async function addDailyOvertime(event, team, member, date) {
     event.preventDefault();
-    if (!member.overtimeHourlyRate || member.overtimeHourlyRate <= 0) {
-      setMessage("Super Admin must set OT hourly salary before adding overtime");
-      return;
-    }
     const form = dailyOvertimeFormFor(member, date);
 
     try {
@@ -3364,9 +3549,6 @@ function TeamPanel({ user, users = [], teams, approvals = [], reload, setMessage
                         <tr>
                           <th rowSpan="2">S.No</th>
                           <th rowSpan="2">Name</th>
-                          <th rowSpan="2">Current Salary</th>
-                          <th rowSpan="2">Total OT Salary</th>
-                          <th rowSpan="2">Total Salary</th>
                           <th colSpan="2">{shortDateLabel(todayKey)}</th>
                         </tr>
                         <tr>
@@ -3378,126 +3560,130 @@ function TeamPanel({ user, users = [], teams, approvals = [], reload, setMessage
                         {group.sections.map((section) => (
                           <React.Fragment key={`${group.teamName}-${section.sectionName}`}>
                             <tr className="team-report-subheading">
-                              <td colSpan="7">{section.sectionName}</td>
+                              <td colSpan="4">{section.sectionName}</td>
                             </tr>
-                            {section.members.map((member, index) => {
-                              const attendance = attendanceFor(member, todayKey);
-                              const todayOvertime = dailyOvertimeFormFor(member, todayKey);
-
-                              return (
-                                <tr key={`report-${member._id}`}>
-                                  <td>{section.serialStart + index}</td>
-                                  <td>
-                                    <strong>{member.name}</strong>
-                                    <span>{member.position || "No position"}</span>
-                                    <small>{member.trade}</small>
-                                  </td>
-                                  <td>{money(member.fixedSalary)}</td>
-                                  <td>{money(overtimeTotal(member))}</td>
-                                  <td>{money(Number(member.fixedSalary || 0) + overtimeTotal(member))}</td>
-                                  <td>
-                                    {user.role === "admin" ? (
-                                      <select
-                                        className={`attendance-select compact ${attendance}`}
-                                        value={attendance}
-                                        onChange={(event) => updateAttendance(team, member, todayKey, event.target.value)}
-                                      >
-                                        <option value="present">P</option>
-                                        <option value="absent">A</option>
-                                        <option value="half">0.5</option>
-                                      </select>
-                                    ) : (
-                                      <strong className={`attendance-pill compact ${attendance}`}>
-                                        {attendanceShortLabel(attendance)}
-                                      </strong>
-                                    )}
-                                  </td>
-                                  <td>
-                                    {(() => {
-                                      if (user.role !== "admin") {
-                                        return (
-                                          <div className="report-ot-text">
-                                            <span>{overtimeForDate(member, todayKey)} hr - {money(overtimeAmountForDate(member, todayKey))}</span>
-                                            <small>{overtimeRemarksForDate(member, todayKey) || "No remarks"}</small>
-                                          </div>
-                                        );
-                                      }
-
-                                      const todayOvertimeHours = overtimeForDate(member, todayKey);
-                                      const todayOvertimeRemarks = overtimeRemarksForDate(member, todayKey);
-                                      const hasOTData = todayOvertimeHours > 0 || todayOvertimeRemarks;
-                                      const isEditingState = editingOvertimeForms[`${member._id}-${todayKey}`];
-                                      const disableInputs = hasOTData && !isEditingState;
-
-                                      return (
-                                        <form className="report-ot-form" style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "nowrap" }} onSubmit={(event) => addDailyOvertime(event, team, member, todayKey)}>
-                                          <input
-                                            aria-label={`${member.name} today overtime hours`}
-                                            placeholder="OT"
-                                            type="number"
-                                            min="0"
-                                            step="0.5"
-                                            value={todayOvertime.hours}
-                                            style={{ width: "70px", minWidth: "70px" }}
-                                            disabled={disableInputs}
-                                            onChange={(event) => setDailyOvertimeForms({
-                                              ...dailyOvertimeForms,
-                                              [`${member._id}-${todayKey}`]: {
-                                                ...todayOvertime,
-                                                hours: event.target.value
-                                              }
-                                            })}
-                                          />
-                                          <input
-                                            aria-label={`${member.name} today overtime remarks`}
-                                            placeholder="Remarks"
-                                            value={todayOvertime.note}
-                                            style={{ width: "150px", minWidth: "150px" }}
-                                            disabled={disableInputs}
-                                            onChange={(event) => setDailyOvertimeForms({
-                                              ...dailyOvertimeForms,
-                                              [`${member._id}-${todayKey}`]: {
-                                                ...todayOvertime,
-                                                note: event.target.value
-                                              }
-                                            })}
-                                          />
-                                          {disableInputs ? (
-                                            <button 
-                                              type="button" 
-                                              className="ghost-button" 
-                                              style={{ padding: "0 8px", whiteSpace: "nowrap" }}
-                                              onClick={() => setEditingOvertimeForms({
-                                                ...editingOvertimeForms,
-                                                [`${member._id}-${todayKey}`]: true
-                                              })}
-                                            >
-                                              Edit
-                                            </button>
-                                          ) : hasOTData ? (
-                                            <button 
-                                              type="button" 
-                                              className="ghost-button" 
-                                              style={{ padding: "0 8px", whiteSpace: "nowrap" }}
-                                              onClick={() => setEditingOvertimeForms({
-                                                ...editingOvertimeForms,
-                                                [`${member._id}-${todayKey}`]: false
-                                              })}
-                                            >
-                                              Cancel
-                                            </button>
-                                          ) : null}
-                                          <button type="submit" style={{ whiteSpace: "nowrap" }} disabled={disableInputs || !member.overtimeHourlyRate || member.overtimeHourlyRate <= 0}>
-                                            <Clock size={14} />
-                                            Save
-                                          </button>
-                                        </form>
-                                      );
-                                    })()}
-                                  </td>
+                            {section.positionGroups.map((positionGroup) => (
+                              <React.Fragment key={`${section.sectionName}-${positionGroup.positionName}`}>
+                                <tr className="team-report-position-heading">
+                                  <td colSpan="4">{positionGroup.positionName}</td>
                                 </tr>
-                              );
-                            })}
+                                {positionGroup.members.map((member, index) => {
+                                  const attendance = attendanceFor(member, todayKey);
+                                  const todayOvertime = dailyOvertimeFormFor(member, todayKey);
+
+                                  return (
+                                    <tr key={`report-${member._id}`}>
+                                      <td>{positionGroup.serialStart + index}</td>
+                                      <td>
+                                        <strong>{member.name}</strong>
+                                        <span>{member.position || "No position"}</span>
+                                        <small>{member.trade}</small>
+                                      </td>
+                                      <td>
+                                        {user.role === "admin" ? (
+                                          <select
+                                            className={`attendance-select compact ${attendance}`}
+                                            value={attendance}
+                                            onChange={(event) => updateAttendance(team, member, todayKey, event.target.value)}
+                                          >
+                                            <option value="present">P</option>
+                                            <option value="absent">A</option>
+                                            <option value="half">0.5</option>
+                                          </select>
+                                        ) : (
+                                          <strong className={`attendance-pill compact ${attendance}`}>
+                                            {attendanceShortLabel(attendance)}
+                                          </strong>
+                                        )}
+                                      </td>
+                                      <td>
+                                        {(() => {
+                                          if (user.role !== "admin") {
+                                            return (
+                                              <div className="report-ot-text">
+                                                <span>{overtimeForDate(member, todayKey)} hr - {money(overtimeAmountForDate(member, todayKey))}</span>
+                                                <small>{overtimeRemarksForDate(member, todayKey) || "No remarks"}</small>
+                                              </div>
+                                            );
+                                          }
+
+                                          const todayOvertimeHours = overtimeForDate(member, todayKey);
+                                          const todayOvertimeRemarks = overtimeRemarksForDate(member, todayKey);
+                                          const hasOTData = todayOvertimeHours > 0 || todayOvertimeRemarks;
+                                          const isEditingState = editingOvertimeForms[`${member._id}-${todayKey}`];
+                                          const disableInputs = hasOTData && !isEditingState;
+
+                                          return (
+                                            <form className="report-ot-form" style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "nowrap" }} onSubmit={(event) => addDailyOvertime(event, team, member, todayKey)}>
+                                              <input
+                                                aria-label={`${member.name} today overtime hours`}
+                                                placeholder="OT"
+                                                type="number"
+                                                min="0"
+                                                step="0.5"
+                                                value={todayOvertime.hours}
+                                                style={{ width: "70px", minWidth: "70px" }}
+                                                disabled={disableInputs}
+                                                onChange={(event) => setDailyOvertimeForms({
+                                                  ...dailyOvertimeForms,
+                                                  [`${member._id}-${todayKey}`]: {
+                                                    ...todayOvertime,
+                                                    hours: event.target.value
+                                                  }
+                                                })}
+                                              />
+                                              <input
+                                                aria-label={`${member.name} today overtime remarks`}
+                                                placeholder="Remarks"
+                                                value={todayOvertime.note}
+                                                style={{ width: "150px", minWidth: "150px" }}
+                                                disabled={disableInputs}
+                                                onChange={(event) => setDailyOvertimeForms({
+                                                  ...dailyOvertimeForms,
+                                                  [`${member._id}-${todayKey}`]: {
+                                                    ...todayOvertime,
+                                                    note: event.target.value
+                                                  }
+                                                })}
+                                              />
+                                              {disableInputs ? (
+                                                <button 
+                                                  type="button" 
+                                                  className="ghost-button" 
+                                                  style={{ padding: "0 8px", whiteSpace: "nowrap" }}
+                                                  onClick={() => setEditingOvertimeForms({
+                                                    ...editingOvertimeForms,
+                                                    [`${member._id}-${todayKey}`]: true
+                                                  })}
+                                                >
+                                                  Edit
+                                                </button>
+                                              ) : hasOTData ? (
+                                                <button 
+                                                  type="button" 
+                                                  className="ghost-button" 
+                                                  style={{ padding: "0 8px", whiteSpace: "nowrap" }}
+                                                  onClick={() => setEditingOvertimeForms({
+                                                    ...editingOvertimeForms,
+                                                    [`${member._id}-${todayKey}`]: false
+                                                  })}
+                                                >
+                                                  Cancel
+                                                </button>
+                                              ) : null}
+                                              <button type="submit" style={{ whiteSpace: "nowrap" }} disabled={disableInputs}>
+                                                <Clock size={14} />
+                                                Save
+                                              </button>
+                                            </form>
+                                          );
+                                        })()}
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
+                              </React.Fragment>
+                            ))}
                           </React.Fragment>
                         ))}
                       </tbody>

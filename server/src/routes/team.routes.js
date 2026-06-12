@@ -380,10 +380,6 @@ router.post("/:teamId/members/:memberId/overtime", requireAuth, async (req, res,
     const member = await Member.findOne({ _id: req.params.memberId, team: req.params.teamId });
     if (!member) throw httpError(404, "Team member not found");
 
-    if (!member.overtimeHourlyRate || member.overtimeHourlyRate <= 0) {
-      throw httpError(400, "Super Admin must set OT hourly salary before overtime can be added");
-    }
-
     const hours = Number(req.body.hours);
     if (!hours || Number.isNaN(hours) || hours <= 0) {
       throw httpError(400, "Overtime hours must be greater than 0");
@@ -413,7 +409,7 @@ router.post("/:teamId/members/:memberId/overtime", requireAuth, async (req, res,
       member: member._id,
       date,
       hours,
-      hourlyRate: member.overtimeHourlyRate,
+      hourlyRate: Math.max(0, Number(member.overtimeHourlyRate || 0)),
       note,
       addedBy: req.user._id
     });
