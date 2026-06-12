@@ -2261,6 +2261,27 @@ button.team-legend-chip {
   padding: 6px 8px;
 }
 
+.report-ot-form-stacked {
+  align-items: flex-start;
+  display: inline-flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.report-ot-form-row {
+  align-items: center;
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 8px;
+}
+
+.ot-salary-warning {
+  color: #b42318;
+  font-size: 0.76rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
 .report-inline-input {
   min-height: 34px;
   min-width: 0;
@@ -3314,5 +3335,247 @@ body {
 
   .mini-table-head {
     display: none;
+  }
+}
+
+@media (max-width: 760px) {
+  html,
+  body {
+    overflow-x: hidden;
+  }
+
+  .app-shell {
+    padding-left: 0;
+  }
+
+  .sidebar {
+    border-radius: 12px;
+    gap: 14px;
+    height: auto;
+    margin: 8px;
+    max-height: none;
+    overflow: visible;
+    padding: 14px;
+    position: static;
+    width: auto;
+  }
+
+  .sidebar-brand,
+  .role-card {
+    padding-inline: 10px;
+  }
+
+  .sidebar-sites {
+    max-height: 240px;
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+
+  .sidebar-calendar {
+    display: none;
+  }
+
+  .content {
+    gap: 14px;
+    max-width: none;
+    padding: 10px 8px 22px;
+    width: 100%;
+  }
+
+  .topbar {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: 1fr;
+  }
+
+  .stat-grid {
+    gap: 10px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .stat-card {
+    border-radius: 8px;
+    gap: 10px;
+    grid-template-columns: 1fr;
+    min-height: 116px;
+    padding: 14px;
+  }
+
+  .stat-icon {
+    height: 44px;
+    width: 44px;
+  }
+
+  .stat-card strong {
+    font-size: 1.45rem;
+  }
+
+  .dashboard-nav-row {
+    align-items: stretch !important;
+    display: grid !important;
+    gap: 10px !important;
+    grid-template-columns: 1fr;
+    justify-content: stretch !important;
+    margin-top: 0;
+  }
+
+  .dashboard-nav-row > div:last-child {
+    display: grid !important;
+    gap: 8px !important;
+    grid-template-columns: 1fr;
+    margin-left: 0 !important;
+    width: 100%;
+  }
+
+  .dashboard-nav-button,
+  .primary-button,
+  .ghost-button {
+    justify-content: center;
+    width: 100%;
+  }
+
+  .team-legend {
+    flex-wrap: nowrap;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 10px;
+    width: 100%;
+  }
+
+  .team-legend-chip {
+    flex: 0 0 auto;
+    min-height: 36px;
+    padding: 7px 10px;
+  }
+
+  .panel,
+  .team-panel,
+  .team-report-card {
+    border-radius: 8px;
+  }
+
+  .panel,
+  .team-report-card {
+    padding: 14px;
+  }
+
+  .panel-grid,
+  .report-panel,
+  .report-actions,
+  .admin-data-grid,
+  .admin-data-summary-grid,
+  .selected-admin-metrics,
+  .admin-attendance-control-grid,
+  .member-team-transfer-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .report-illustration {
+    display: none;
+  }
+
+  .report-actions {
+    gap: 10px;
+  }
+
+  .icon-field {
+    min-height: 42px;
+  }
+
+  .salary-row,
+  .member-row,
+  .password-row,
+  .created-member-row,
+  .admin-data-row,
+  .request-summary,
+  .request-details,
+  .member-form-salary-row,
+  .admin-salary-row,
+  .selected-team-card,
+  .member-move-control,
+  .created-member-move {
+    grid-template-columns: 1fr !important;
+  }
+
+  .action-row,
+  .action-row.compact {
+    display: grid;
+    grid-template-columns: 1fr;
+    width: 100%;
+  }
+
+  .team-report-table-wrap,
+  .members-table-wrap,
+  .admin-table-scroll {
+    -webkit-overflow-scrolling: touch;
+    overflow-x: auto;
+    width: 100%;
+  }
+
+  .team-report-table {
+    min-width: 760px;
+  }
+
+  .team-report-table th,
+  .team-report-table td {
+    padding: 9px 10px;
+  }
+
+  .report-ot-form-stacked,
+  .report-ot-form-row {
+    width: 100%;
+  }
+
+  .report-ot-form-row {
+    display: grid;
+    grid-template-columns: minmax(58px, 0.45fr) minmax(110px, 1fr) auto;
+  }
+
+  .report-ot-form-row input {
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+}
+
+@media (max-width: 420px) {
+  .content {
+    padding: 8px 6px 18px;
+  }
+
+  .sidebar {
+    margin: 6px;
+    padding: 12px;
+  }
+
+  .sidebar .brand-mark.small {
+    font-size: 1rem;
+  }
+
+  .stat-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .stat-card {
+    min-height: 92px;
+  }
+
+  .panel,
+  .team-report-card {
+    padding: 10px;
+  }
+
+  .panel-heading,
+  .section-subheading,
+  .team-report-heading {
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .report-ot-form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .report-ot-form-row button {
+    width: 100%;
   }
 }

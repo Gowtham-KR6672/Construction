@@ -333,12 +333,16 @@ function excelSheetName(name, usedNames) {
   return sheetName;
 }
 
-function excelCell(value) {
+function excelCell(cell) {
+  const isStyledCell = cell && typeof cell === "object" && !Array.isArray(cell) && Object.prototype.hasOwnProperty.call(cell, "value");
+  const value = isStyledCell ? cell.value : cell;
+  const styleId = isStyledCell && cell.style ? ` ss:StyleID="${xmlValue(cell.style)}"` : "";
+
   if (typeof value === "number" && Number.isFinite(value)) {
-    return `<Cell><Data ss:Type="Number">${value}</Data></Cell>`;
+    return `<Cell${styleId}><Data ss:Type="Number">${value}</Data></Cell>`;
   }
 
-  return `<Cell><Data ss:Type="String">${xmlValue(value)}</Data></Cell>`;
+  return `<Cell${styleId}><Data ss:Type="String">${xmlValue(value)}</Data></Cell>`;
 }
 
 function downloadExcelWorkbook(filename, sheets) {
@@ -354,6 +358,16 @@ function downloadExcelWorkbook(filename, sheets) {
   xmlns:x="urn:schemas-microsoft-com:office:excel"
   xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"
   xmlns:html="http://www.w3.org/TR/REC-html40">
+  <Styles>
+    <Style ss:ID="totalBlue">
+      <Font ss:Bold="1" />
+      <Interior ss:Color="#5B9BD5" ss:Pattern="Solid" />
+    </Style>
+    <Style ss:ID="grandPurple">
+      <Font ss:Bold="1" />
+      <Interior ss:Color="#D86CD4" ss:Pattern="Solid" />
+    </Style>
+  </Styles>
   ${worksheets}
 </Workbook>`;
   const blob = new Blob([workbook], { type: "application/vnd.ms-excel;charset=utf-8" });
@@ -2360,12 +2374,16 @@ function ReportsPanel({ teams }) {
   const today = dateKey(new Date());
   const [dateRange, setDateRange] = useState({ from: today, to: today });
   const [selectedReportTeamName, setSelectedReportTeamName] = useState("");
-  const [selectedReportMemberId, setSelectedReportMemberId] = useState("");
+  const [selectedReportSubTeamName, setSelectedReportSubTeamName] = useState("");
   const [reportError, setReportError] = useState("");
-  const reportMembers = selectedReportTeamName
-    ? teams.flatMap((team) => team.members.filter((member) => member.trade === selectedReportTeamName || member.trade?.startsWith(`${selectedReportTeamName} -`)))
+  const reportSubTeams = selectedReportTeamName
+    ? Array.from(new Set(
+      teams
+        .flatMap((team) => team.members)
+        .filter((member) => memberTeamBase(member.trade) === selectedReportTeamName)
+        .map((member) => memberSubTeamName(member.trade))
+    )).sort((first, second) => first.localeCompare(second))
     : [];
-  const selectedReportMember = reportMembers.find((member) => member._id === selectedReportMemberId);
 
   function overtimeHoursForDates(member, dates) {
     return (member.overtimeEntries || [])
@@ -2378,13 +2396,6 @@ function ReportsPanel({ teams }) {
       .filter((entry) => dates.includes(normalizeDateKey(entry.date)) && entry.note)
       .map((entry) => `${normalizeDateKey(entry.date)}: ${entry.note}`)
       .join("; ");
-  }
-
-  function attendanceBreakdown(member, dates) {
-    return dates.map((date) => {
-      const status = member.attendanceEntries?.find((entry) => normalizeDateKey(entry.date) === date)?.status || "absent";
-      return `${date}: ${status}`;
-    }).join("; ");
   }
 
   function downloadReport(event) {
@@ -2406,12 +2417,14 @@ function ReportsPanel({ teams }) {
 
     const dates = datesBetween(start, end);
     const periodLabel = `${dateRange.from} to ${dateRange.to}`;
+    const styledCell = (value, style) => ({ value, style });
     const rows = [
       [
         "Date range",
         "Team",
         "Site",
         "Member",
+        "Position",
         "Team",
         "Phone",
         "Attendance days",
@@ -2419,39 +2432,33 @@ function ReportsPanel({ teams }) {
         "OT hours",
         "OT amount",
         "Total salary",
-        "Attendance detail",
         "OT remarks"
       ]
     ];
 
     let exportedRows = 0;
+    const groupedMembers = new Map();
 
     teams.forEach((team) => {
       const members = team.members.filter((member) => {
         const matchesTeam = selectedReportTeamName
-          ? member.trade === selectedReportTeamName || member.trade?.startsWith(`${selectedReportTeamName} -`)
+          ? memberTeamBase(member.trade) === selectedReportTeamName
           : true;
-        const matchesMember = selectedReportMemberId ? member._id === selectedReportMemberId : true;
+        const matchesSubTeam = selectedReportSubTeamName ? memberSubTeamName(member.trade) === selectedReportSubTeamName : true;
 
-        return matchesTeam && matchesMember;
+        return matchesTeam && matchesSubTeam;
       });
 
       members.forEach((member) => {
-        rows.push([
-          periodLabel,
-          team.name,
-          team.siteLocation,
-          member.name,
-          member.trade,
-          member.phone || "",
-          attendanceDaysForDates(member, dates),
-          attendanceSalaryForDates(member, dates),
-          overtimeHoursForDates(member, dates),
-          overtimeTotalForDates(member, dates),
-          memberTotalForDates(member, dates),
-          attendanceBreakdown(member, dates),
-          overtimeRemarksForDates(member, dates)
-        ]);
+        const groupKey = `${team._id}-${member.trade || "No team"}`;
+        if (!groupedMembers.has(groupKey)) {
+          groupedMembers.set(groupKey, {
+            team,
+            trade: member.trade || "No team",
+            members: []
+          });
+        }
+        groupedMembers.get(groupKey).members.push(member);
         exportedRows += 1;
       });
     });
@@ -2461,9 +2468,87 @@ function ReportsPanel({ teams }) {
       return;
     }
 
+    const summaryRows = [];
+    let grandTotalSalary = 0;
+
+    Array.from(groupedMembers.values())
+      .sort((first, second) => {
+        const teamCompare = first.team.name.localeCompare(second.team.name);
+        if (teamCompare !== 0) return teamCompare;
+        return first.trade.localeCompare(second.trade);
+      })
+      .forEach((group) => {
+        let groupAttendanceDays = 0;
+        let groupDaySalary = 0;
+        let groupOvertimeHours = 0;
+        let groupOvertimeAmount = 0;
+        let groupTotalSalary = 0;
+
+        group.members
+          .sort((first, second) => Number(second.fixedSalary || 0) - Number(first.fixedSalary || 0) || first.name.localeCompare(second.name))
+          .forEach((member) => {
+            const attendanceDaysValue = attendanceDaysForDates(member, dates);
+            const daySalaryValue = attendanceSalaryForDates(member, dates);
+            const overtimeHoursValue = overtimeHoursForDates(member, dates);
+            const overtimeAmountValue = overtimeTotalForDates(member, dates);
+            const totalSalaryValue = memberTotalForDates(member, dates);
+
+            groupAttendanceDays += attendanceDaysValue;
+            groupDaySalary += daySalaryValue;
+            groupOvertimeHours += overtimeHoursValue;
+            groupOvertimeAmount += overtimeAmountValue;
+            groupTotalSalary += totalSalaryValue;
+
+            rows.push([
+              periodLabel,
+              group.team.name,
+              group.team.siteLocation,
+              member.name,
+              member.position || "",
+              member.trade,
+              member.phone || "",
+              attendanceDaysValue,
+              daySalaryValue,
+              overtimeHoursValue,
+              overtimeAmountValue,
+              totalSalaryValue,
+              overtimeRemarksForDates(member, dates)
+            ]);
+          });
+
+        rows.push([
+          "",
+          "",
+          "",
+          "",
+          "",
+          styledCell("Total", "totalBlue"),
+          "",
+          styledCell(groupAttendanceDays, "totalBlue"),
+          styledCell(groupDaySalary, "totalBlue"),
+          styledCell(groupOvertimeHours, "totalBlue"),
+          styledCell(groupOvertimeAmount, "totalBlue"),
+          styledCell(groupTotalSalary, "totalBlue"),
+          ""
+        ]);
+        rows.push([]);
+
+        summaryRows.push([group.trade, groupTotalSalary]);
+        grandTotalSalary += groupTotalSalary;
+      });
+
+    rows.push([], [], [], []);
+    rows.push(["", "", "", "", "Total Salary details", styledCell("Team", "totalBlue"), styledCell("Total Salary", "totalBlue")]);
+    summaryRows.forEach(([trade, totalSalary]) => {
+      rows.push(["", "", "", "", "", trade, totalSalary]);
+    });
+    rows.push(["", "", "", "", "", styledCell("Total", "grandPurple"), styledCell(grandTotalSalary, "grandPurple")]);
+
     const teamLabel = selectedReportTeamName ? selectedReportTeamName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") : "all-teams";
-    const memberLabel = selectedReportMember ? `-${selectedReportMember.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}` : "";
-    downloadCsv(`construction-${teamLabel}${memberLabel}-${dateRange.from}-to-${dateRange.to}-report-${dateKey(new Date())}.csv`, rows);
+    const subTeamLabel = selectedReportSubTeamName ? `-${selectedReportSubTeamName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}` : "";
+    downloadExcelWorkbook(`construction-${teamLabel}${subTeamLabel}-${dateRange.from}-to-${dateRange.to}-report-${dateKey(new Date())}.xls`, [
+      { name: "Report", rows }
+    ]);
   }
 
   return (
@@ -2484,7 +2569,7 @@ function ReportsPanel({ teams }) {
               value={selectedReportTeamName}
               onChange={(event) => {
                 setSelectedReportTeamName(event.target.value);
-                setSelectedReportMemberId("");
+                setSelectedReportSubTeamName("");
               }}
             >
               <option value="">All teams</option>
@@ -2497,17 +2582,17 @@ function ReportsPanel({ teams }) {
           </IconField>
         </label>
         <label>
-          Member
+          Sub-team
           <IconField icon={Users}>
             <select
-              value={selectedReportMemberId}
-              onChange={(event) => setSelectedReportMemberId(event.target.value)}
+              value={selectedReportSubTeamName}
+              onChange={(event) => setSelectedReportSubTeamName(event.target.value)}
               disabled={!selectedReportTeamName}
             >
-              <option value="">{selectedReportTeamName ? "All members" : "Select team first"}</option>
-              {reportMembers.map((member) => (
-                <option value={member._id} key={member._id}>
-                  {member.name}
+              <option value="">{selectedReportTeamName ? "All sub-teams" : "Select team first"}</option>
+              {reportSubTeams.map((subTeamName) => (
+                <option value={subTeamName} key={subTeamName}>
+                  {formatSubTeamHeading(subTeamName)}
                 </option>
               ))}
             </select>
@@ -3203,6 +3288,10 @@ function TeamPanel({ user, users = [], teams, approvals = [], reload, setMessage
 
   async function addDailyOvertime(event, team, member, date) {
     event.preventDefault();
+    if (!member.overtimeHourlyRate || member.overtimeHourlyRate <= 0) {
+      setMessage("Enter the OT salary before saving overtime");
+      return;
+    }
     const form = dailyOvertimeFormFor(member, date);
 
     try {
@@ -3612,69 +3701,73 @@ function TeamPanel({ user, users = [], teams, approvals = [], reload, setMessage
                                           const hasOTData = todayOvertimeHours > 0 || todayOvertimeRemarks;
                                           const isEditingState = editingOvertimeForms[`${member._id}-${todayKey}`];
                                           const disableInputs = hasOTData && !isEditingState;
+                                          const needsOvertimeSalary = !member.overtimeHourlyRate || member.overtimeHourlyRate <= 0;
 
                                           return (
-                                            <form className="report-ot-form" style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "nowrap" }} onSubmit={(event) => addDailyOvertime(event, team, member, todayKey)}>
-                                              <input
-                                                aria-label={`${member.name} today overtime hours`}
-                                                placeholder="OT"
-                                                type="number"
-                                                min="0"
-                                                step="0.5"
-                                                value={todayOvertime.hours}
-                                                style={{ width: "70px", minWidth: "70px" }}
-                                                disabled={disableInputs}
-                                                onChange={(event) => setDailyOvertimeForms({
-                                                  ...dailyOvertimeForms,
-                                                  [`${member._id}-${todayKey}`]: {
-                                                    ...todayOvertime,
-                                                    hours: event.target.value
-                                                  }
-                                                })}
-                                              />
-                                              <input
-                                                aria-label={`${member.name} today overtime remarks`}
-                                                placeholder="Remarks"
-                                                value={todayOvertime.note}
-                                                style={{ width: "150px", minWidth: "150px" }}
-                                                disabled={disableInputs}
-                                                onChange={(event) => setDailyOvertimeForms({
-                                                  ...dailyOvertimeForms,
-                                                  [`${member._id}-${todayKey}`]: {
-                                                    ...todayOvertime,
-                                                    note: event.target.value
-                                                  }
-                                                })}
-                                              />
-                                              {disableInputs ? (
-                                                <button 
-                                                  type="button" 
-                                                  className="ghost-button" 
-                                                  style={{ padding: "0 8px", whiteSpace: "nowrap" }}
-                                                  onClick={() => setEditingOvertimeForms({
-                                                    ...editingOvertimeForms,
-                                                    [`${member._id}-${todayKey}`]: true
+                                            <form className="report-ot-form report-ot-form-stacked" onSubmit={(event) => addDailyOvertime(event, team, member, todayKey)}>
+                                              <div className="report-ot-form-row">
+                                                <input
+                                                  aria-label={`${member.name} today overtime hours`}
+                                                  placeholder="OT"
+                                                  type="number"
+                                                  min="0"
+                                                  step="0.5"
+                                                  value={todayOvertime.hours}
+                                                  style={{ width: "70px", minWidth: "70px" }}
+                                                  disabled={disableInputs}
+                                                  onChange={(event) => setDailyOvertimeForms({
+                                                    ...dailyOvertimeForms,
+                                                    [`${member._id}-${todayKey}`]: {
+                                                      ...todayOvertime,
+                                                      hours: event.target.value
+                                                    }
                                                   })}
-                                                >
-                                                  Edit
-                                                </button>
-                                              ) : hasOTData ? (
-                                                <button 
-                                                  type="button" 
-                                                  className="ghost-button" 
-                                                  style={{ padding: "0 8px", whiteSpace: "nowrap" }}
-                                                  onClick={() => setEditingOvertimeForms({
-                                                    ...editingOvertimeForms,
-                                                    [`${member._id}-${todayKey}`]: false
+                                                />
+                                                <input
+                                                  aria-label={`${member.name} today overtime remarks`}
+                                                  placeholder="Remarks"
+                                                  value={todayOvertime.note}
+                                                  style={{ width: "150px", minWidth: "150px" }}
+                                                  disabled={disableInputs}
+                                                  onChange={(event) => setDailyOvertimeForms({
+                                                    ...dailyOvertimeForms,
+                                                    [`${member._id}-${todayKey}`]: {
+                                                      ...todayOvertime,
+                                                      note: event.target.value
+                                                    }
                                                   })}
-                                                >
-                                                  Cancel
+                                                />
+                                                {disableInputs ? (
+                                                  <button 
+                                                    type="button" 
+                                                    className="ghost-button" 
+                                                    style={{ padding: "0 8px", whiteSpace: "nowrap" }}
+                                                    onClick={() => setEditingOvertimeForms({
+                                                      ...editingOvertimeForms,
+                                                      [`${member._id}-${todayKey}`]: true
+                                                    })}
+                                                  >
+                                                    Edit
+                                                  </button>
+                                                ) : hasOTData ? (
+                                                  <button 
+                                                    type="button" 
+                                                    className="ghost-button" 
+                                                    style={{ padding: "0 8px", whiteSpace: "nowrap" }}
+                                                    onClick={() => setEditingOvertimeForms({
+                                                      ...editingOvertimeForms,
+                                                      [`${member._id}-${todayKey}`]: false
+                                                    })}
+                                                  >
+                                                    Cancel
+                                                  </button>
+                                                ) : null}
+                                                <button type="submit" style={{ whiteSpace: "nowrap" }} disabled={disableInputs || needsOvertimeSalary}>
+                                                  <Clock size={14} />
+                                                  Save
                                                 </button>
-                                              ) : null}
-                                              <button type="submit" style={{ whiteSpace: "nowrap" }} disabled={disableInputs}>
-                                                <Clock size={14} />
-                                                Save
-                                              </button>
+                                              </div>
+                                              {needsOvertimeSalary && <small className="ot-salary-warning">Enter the OT salary</small>}
                                             </form>
                                           );
                                         })()}
